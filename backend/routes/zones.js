@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require('../db/pool');
 const { authMiddleware, roleMiddleware } = require('../middleware/auth');
 
-router.get('/', async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT tz.id, tz.name, tz.zone_type, tz.risk_level, tz.description, tz.created_at,

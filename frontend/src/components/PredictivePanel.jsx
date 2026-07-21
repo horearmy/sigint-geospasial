@@ -35,13 +35,13 @@ export default function PredictivePanel({ onClose }) {
       {
         label: 'Rata-rata/Hari',
         data: forecast.forecasts.map(f => parseFloat(f.avg_daily)),
-        backgroundColor: 'rgba(37, 99, 235, 0.7)',
+        backgroundColor: 'rgba(27, 67, 50, 0.7)',
         borderRadius: 4,
       },
       {
         label: '7 Hari Terakhir',
         data: forecast.forecasts.map(f => f.last_7d / 7),
-        backgroundColor: 'rgba(16, 185, 129, 0.7)',
+        backgroundColor: 'rgba(27, 67, 50, 0.7)',
         borderRadius: 4,
       },
     ],
@@ -80,7 +80,7 @@ export default function PredictivePanel({ onClose }) {
             <button key={tab} onClick={() => setActiveTab(tab)}
               style={{
                 padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                background: activeTab === tab ? '#2563eb' : 'transparent',
+                background: activeTab === tab ? '#1b4332' : 'transparent',
                 color: activeTab === tab ? 'white' : '#64748b',
                 fontWeight: 600, fontSize: '0.82rem', transition: 'all 0.2s',
               }}>{label}</button>
@@ -97,7 +97,7 @@ export default function PredictivePanel({ onClose }) {
                   {forecast.summary && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
                       <div style={{ padding: '14px', borderRadius: '8px', background: '#f0f7ff', border: '1px solid #bfdbfe', textAlign: 'center' }}>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#2563eb' }}>{forecast.summary.total_90d || 0}</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1b4332' }}>{forecast.summary.total_90d || 0}</div>
                         <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Total 90 Hari</div>
                       </div>
                       <div style={{ padding: '14px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', textAlign: 'center' }}>
@@ -136,7 +136,7 @@ export default function PredictivePanel({ onClose }) {
                         <div style={{ textAlign: 'right' }}>
                           <div style={{
                             fontSize: '0.82rem', fontWeight: 600,
-                            color: trend > 0 ? '#ef4444' : trend < 0 ? '#22c55e' : '#64748b',
+                            color: trend > 0 ? '#ef4444' : trend < 0 ? '#1b4332' : '#64748b',
                           }}>
                             {trend > 0 ? '📈' : trend < 0 ? '📉' : '➡️'} {trend > 0 ? '+' : ''}{f.trend_pct}%
                           </div>

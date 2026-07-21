@@ -70,7 +70,7 @@ export default function NotificationBell() {
             width: '18px', height: '18px', borderRadius: '50%',
             background: '#ef4444', color: 'white', fontSize: '0.65rem',
             fontWeight: 700, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', border: '2px solid #1e3a5f',
+            justifyContent: 'center',             border: '2px solid #0b2a1b',
           }}>{unreadCount > 99 ? '99+' : unreadCount}</span>
         )}
       </button>
@@ -95,7 +95,7 @@ export default function NotificationBell() {
               <strong style={{ fontSize: '0.9rem', color: '#1e293b' }}>Notifikasi</strong>
               {unreadCount > 0 && (
                 <button onClick={handleReadAll} style={{
-                  background: 'none', border: 'none', color: '#2563eb',
+                  background: 'none', border: 'none',                   color: '#1b4332',
                   fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600,
                 }}>Tandai semua dibaca</button>
               )}
@@ -132,7 +132,7 @@ export default function NotificationBell() {
                       {!n.is_read && (
                         <div style={{
                           width: '8px', height: '8px', borderRadius: '50%',
-                          background: '#2563eb', flexShrink: 0, marginTop: '4px',
+                          background: '#1b4332', flexShrink: 0, marginTop: '4px',
                         }} />
                       )}
                     </div>

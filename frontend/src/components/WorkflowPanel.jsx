@@ -84,7 +84,7 @@ export default function WorkflowPanel({ laporanList, onClose }) {
             <button key={tab} onClick={() => setActiveTab(tab)}
               style={{
                 padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                background: activeTab === tab ? '#2563eb' : 'transparent',
+                background: activeTab === tab ? '#1b4332' : 'transparent',
                 color: activeTab === tab ? 'white' : '#64748b',
                 fontWeight: 600, fontSize: '0.82rem', transition: 'all 0.2s',
               }}>{label}</button>
@@ -136,7 +136,7 @@ export default function WorkflowPanel({ laporanList, onClose }) {
                   ) : templates.map(t => (
                     <div key={t.id} style={{ padding: '12px', borderRadius: '8px', marginBottom: '8px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
                       <strong style={{ fontSize: '0.9rem' }}>{t.name}</strong>
-                      <span style={{ marginLeft: '8px', padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', background: '#eff6ff', color: '#2563eb' }}>{t.kategori}</span>
+                      <span style={{ marginLeft: '8px', padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', background: '#eff6ff', color: '#1b4332' }}>{t.kategori}</span>
                       {t.description && <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px' }}>{t.description}</p>}
                       {t.fields && (
                         <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>

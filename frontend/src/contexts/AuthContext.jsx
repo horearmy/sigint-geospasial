@@ -12,6 +12,26 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('token'))
   const [loading, setLoading] = useState(true)
 
+  const logout = useCallback(() => {
+    localStorage.removeItem('token')
+    setToken(null)
+    setUser(null)
+    delete axios.defaults.headers.common['Authorization']
+  }, [])
+
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          logout()
+        }
+        return Promise.reject(error)
+      }
+    )
+    return () => axios.interceptors.response.eject(interceptor)
+  }, [logout])
+
   const fetchUser = useCallback(async () => {
     if (!token) { setLoading(false); return }
     try {
@@ -23,7 +43,7 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false)
     }
-  }, [token])
+  }, [token, logout])
 
   useEffect(() => { fetchUser() }, [fetchUser])
 
@@ -47,15 +67,8 @@ export function AuthProvider({ children }) {
     return u
   }
 
-  const logout = () => {
-    localStorage.removeItem('token')
-    setToken(null)
-    setUser(null)
-    delete axios.defaults.headers.common['Authorization']
-  }
-
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, setUser, token, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )

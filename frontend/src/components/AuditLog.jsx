@@ -34,7 +34,7 @@ export default function AuditLog({ onClose }) {
   }
 
   const actionColors = {
-    login: '#22c55e', logout: '#64748b', create: '#2563eb', update: '#f59e0b', delete: '#ef4444',
+    login: '#22c55e', logout: '#64748b', create: '#1b4332', update: '#f59e0b', delete: '#ef4444',
   }
 
   return (

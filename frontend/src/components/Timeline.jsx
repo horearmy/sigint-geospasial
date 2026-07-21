@@ -3,9 +3,9 @@ import { motion } from 'framer-motion'
 import axios from 'axios'
 
 const KATEGORI_COLORS = {
-  'Banjir': '#2563eb', 'Gempa Bumi': '#ef4444', 'Kebakaran': '#f97316',
-  'Longsor': '#854d0e', 'Angin Kencang': '#6366f1', 'Kekeringan': '#eab308',
-  'Bencana Lainnya': '#a855f7', 'Berita Umum': '#22c55e',
+  'Gangguan Keamanan': '#ef4444', 'Separatisme': '#7c3aed', 'Terorisme': '#dc2626',
+  'Radikalisme': '#ea580c',   'Keamanan Nasional': '#1b4332', 'Politik': '#0891b2',
+  'Sosial': '#16a34a', 'Ekonomi': '#c9a84c', 'Informasi Lain': '#6366f1',
 }
 
 export default function Timeline({ onClose }) {
@@ -57,7 +57,7 @@ export default function Timeline({ onClose }) {
               onClick={() => setPeriod(val)}
               style={{
                 padding: '6px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                background: period === val ? '#2563eb' : '#f1f5f9',
+                background: period === val ? '#1b4332' : '#f1f5f9',
                 color: period === val ? 'white' : '#64748b',
                 fontWeight: 600, fontSize: '0.8rem', transition: 'all 0.2s',
               }}
@@ -80,8 +80,8 @@ export default function Timeline({ onClose }) {
                   display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px',
                 }}>
                   <div style={{
-                    width: '12px', height: '12px', borderRadius: '50%', background: '#2563eb',
-                    boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.2)',
+                    width: '12px', height: '12px', borderRadius: '50%', background: '#1b4332',
+                    boxShadow: '0 0 0 3px rgba(27, 67, 50, 0.2)',
                   }} />
                   <div style={{
                     flex: 1, height: '1px', background: '#e2e8f0',

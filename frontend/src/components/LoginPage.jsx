@@ -33,12 +33,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
+    <div className="login-page" style={{
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #2563eb 100%)',
       padding: '20px',
     }}>
       <motion.div
@@ -55,13 +54,13 @@ export default function LoginPage() {
         }}
       >
         <div style={{
-          background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
+          background: 'linear-gradient(135deg, #0b2a1b, #1b4332)',
           padding: '30px',
           textAlign: 'center',
           color: 'white',
         }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🌐</div>
-          <h1 style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0 }}>SIGINT</h1>
+          <img src="/logo.png" alt="Logo" style={{ width: '56px', height: '56px', objectFit: 'contain', marginBottom: '8px' }} />
+          <h1 style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0 }}>SIGINT KOSTRAD</h1>
           <p style={{ fontSize: '0.82rem', opacity: 0.8, margin: '4px 0 0' }}>Sistem Intelijen Geospasial</p>
         </div>
 
@@ -72,7 +71,7 @@ export default function LoginPage() {
               style={{
                 flex: 1, padding: '8px', border: 'none', borderRadius: '6px', cursor: 'pointer',
                 background: isLogin ? 'white' : 'transparent',
-                color: isLogin ? '#2563eb' : '#64748b',
+                color: isLogin ? '#1b4332' : '#64748b',
                 fontWeight: 600, fontSize: '0.85rem',
                 boxShadow: isLogin ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                 transition: 'all 0.2s',
@@ -83,7 +82,7 @@ export default function LoginPage() {
               style={{
                 flex: 1, padding: '8px', border: 'none', borderRadius: '6px', cursor: 'pointer',
                 background: !isLogin ? 'white' : 'transparent',
-                color: !isLogin ? '#2563eb' : '#64748b',
+                color: !isLogin ? '#1b4332' : '#64748b',
                 fontWeight: 600, fontSize: '0.85rem',
                 boxShadow: !isLogin ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                 transition: 'all 0.2s',
@@ -111,7 +110,7 @@ export default function LoginPage() {
                   borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box',
                   outline: 'none', transition: 'border-color 0.2s',
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                onFocus={(e) => e.target.style.borderColor = '#1b4332'}
                 onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
               />
             </div>
@@ -127,7 +126,7 @@ export default function LoginPage() {
                       borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box',
                       outline: 'none', transition: 'border-color 0.2s',
                     }}
-                    onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                    onFocus={(e) => e.target.style.borderColor = '#1b4332'}
                     onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                   />
                 </div>
@@ -140,7 +139,7 @@ export default function LoginPage() {
                       borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box',
                       outline: 'none', transition: 'border-color 0.2s',
                     }}
-                    onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                    onFocus={(e) => e.target.style.borderColor = '#1b4332'}
                     onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                   />
                 </div>
@@ -156,7 +155,7 @@ export default function LoginPage() {
                   borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box',
                   outline: 'none', transition: 'border-color 0.2s',
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                onFocus={(e) => e.target.style.borderColor = '#1b4332'}
                 onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
               />
             </div>
@@ -165,11 +164,11 @@ export default function LoginPage() {
               type="submit" disabled={saving}
               style={{
                 width: '100%', padding: '12px', border: 'none', borderRadius: '8px',
-                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                background: 'linear-gradient(135deg, #1b4332, #0b2a1b)',
                 color: 'white', fontWeight: 600, fontSize: '0.95rem',
                 cursor: saving ? 'not-allowed' : 'pointer',
                 opacity: saving ? 0.7 : 1,
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
+                boxShadow: '0 4px 12px rgba(27, 67, 50, 0.35)',
                 transition: 'all 0.2s',
               }}
             >

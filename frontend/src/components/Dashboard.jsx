@@ -82,12 +82,12 @@ export default function Dashboard({ laporan, stats, getKategoriColor, getKategor
         {
           label: 'Laporan per Hari',
           data: Object.values(days),
-          borderColor: '#2563eb',
-          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          borderColor: '#1b4332',
+          backgroundColor: 'rgba(27, 67, 50, 0.1)',
           fill: true,
           tension: 0.4,
           pointRadius: 5,
-          pointBackgroundColor: '#2563eb',
+          pointBackgroundColor: '#1b4332',
           pointBorderColor: 'white',
           pointBorderWidth: 2,
           borderWidth: 2.5,
@@ -133,13 +133,13 @@ export default function Dashboard({ laporan, stats, getKategoriColor, getKategor
           backgroundColor: (ctx) => {
             const chart = ctx.chart
             const { ctx: c, chartArea } = chart
-            if (!chartArea) return 'rgba(99, 102, 241, 0.7)'
+            if (!chartArea) return 'rgba(201, 168, 76, 0.7)'
             const gradient = c.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-            gradient.addColorStop(0, 'rgba(99, 102, 241, 0.3)')
-            gradient.addColorStop(1, 'rgba(99, 102, 241, 0.8)')
+            gradient.addColorStop(0, 'rgba(201, 168, 76, 0.3)')
+            gradient.addColorStop(1, 'rgba(201, 168, 76, 0.8)')
             return gradient
           },
-          borderColor: '#6366f1',
+          borderColor: '#c9a84c',
           borderWidth: 1,
           borderRadius: 6,
           barThickness: 10,
@@ -177,7 +177,7 @@ export default function Dashboard({ laporan, stats, getKategoriColor, getKategor
 
       <motion.div className="kpi-grid" variants={container} initial="hidden" animate="show">
         <AnimatedKpiCard
-          icon="📊" iconBg="rgba(37, 99, 235, 0.1)" iconColor="#2563eb"
+          icon="📊" iconBg="rgba(27, 67, 50, 0.1)" iconColor="#1b4332"
           value={stats.total} label="Total Laporan"
           trend="📈 Semua data" trendDir="up" delay={0} />
 
@@ -188,15 +188,15 @@ export default function Dashboard({ laporan, stats, getKategoriColor, getKategor
           trendDir="up" delay={1} />
 
         <AnimatedKpiCard
-          icon="📅" iconBg="rgba(16, 185, 129, 0.1)" iconColor="#10b981"
+          icon="📅" iconBg="rgba(27, 67, 50, 0.1)" iconColor="#1b4332"
           value={stats.latest ? new Date(stats.latest).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}
           label="Laporan Terbaru"
-          trend="🟢 Aktif" trendDir="up" trendColor="#10b981" delay={2} />
+          trend="🟢 Aktif" trendDir="up" trendColor="#1b4332" delay={2} />
 
         <AnimatedKpiCard
-          icon="⏱️" iconBg="rgba(245, 158, 11, 0.1)" iconColor="#f59e0b"
+          icon="⏱️" iconBg="rgba(201, 168, 76, 0.1)" iconColor="#c9a84c"
           value={last24hCount} label="24 Jam Terakhir"
-          trend="🔴 Real-time" trendDir="up" trendColor="#f59e0b" delay={3} />
+          trend="🔴 Real-time" trendDir="up" trendColor="#c9a84c" delay={3} />
       </motion.div>
 
       {chartData && (

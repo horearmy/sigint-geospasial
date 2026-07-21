@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../App'
 
 const ROLES = ['admin', 'analis', 'operator', 'viewer']
-const ROLE_COLORS = { admin: '#ef4444', analis: '#8b5cf6', operator: '#2563eb', viewer: '#64748b' }
+const ROLE_COLORS = { admin: '#ef4444', analis: '#8b5cf6', operator: '#1b4332', viewer: '#64748b' }
 
 export default function UserManagement({ onClose }) {
   const { user } = useAuth()

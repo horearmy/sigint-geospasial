@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const pool = require('../db/pool');
+const { authMiddleware, roleMiddleware, optionalAuth } = require('../middleware/auth');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -29,7 +30,7 @@ const upload = multer({
   },
 });
 
-router.get('/', async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const { kategori, search, lat, lng, radius } = req.query;
     let query = `
@@ -70,7 +71,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/export', async (req, res) => {
+router.get('/export', authMiddleware, async (req, res) => {
   try {
     const { format } = req.query;
     const result = await pool.query(`
@@ -119,7 +120,7 @@ router.get('/export', async (req, res) => {
   }
 });
 
-router.get('/stats', async (req, res) => {
+router.get('/stats', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -143,7 +144,7 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -164,7 +165,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', upload.single('gambar'), async (req, res) => {
+router.post('/', authMiddleware, upload.single('gambar'), async (req, res) => {
   try {
     const { judul, deskripsi, kategori, lokasi_nama, latitude, longitude } = req.body;
 
@@ -210,7 +211,7 @@ router.post('/', upload.single('gambar'), async (req, res) => {
   }
 });
 
-router.put('/:id', upload.single('gambar'), async (req, res) => {
+router.put('/:id', authMiddleware, roleMiddleware('admin', 'analis', 'operator'), upload.single('gambar'), async (req, res) => {
   try {
     const { id } = req.params;
     const { judul, deskripsi, kategori, lokasi_nama, latitude, longitude } = req.body;
@@ -253,7 +254,7 @@ router.put('/:id', upload.single('gambar'), async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authMiddleware, roleMiddleware('admin', 'analis'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(

@@ -1,8 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
+const { authMiddleware } = require('../middleware/auth');
 
-router.get('/pdf', async (req, res) => {
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+router.get('/pdf', authMiddleware, async (req, res) => {
   try {
     const { start_date, end_date, kategori } = req.query;
     let query = `
@@ -44,9 +55,9 @@ function generateReportHTML(laporan, stats, filters) {
   const rows = laporan.map((l, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td><strong>${l.judul}</strong></td>
-      <td><span class="badge">${l.kategori}</span></td>
-      <td>${l.lokasi_nama || '-'}</td>
+      <td><strong>${escapeHtml(l.judul)}</strong></td>
+      <td><span class="badge">${escapeHtml(l.kategori)}</span></td>
+      <td>${escapeHtml(l.lokasi_nama) || '-'}</td>
       <td>${parseFloat(l.latitude).toFixed(4)}, ${parseFloat(l.longitude).toFixed(4)}</td>
       <td>${new Date(l.created_at).toLocaleDateString('id-ID')}</td>
     </tr>

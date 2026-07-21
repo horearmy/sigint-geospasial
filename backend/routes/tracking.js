@@ -57,14 +57,15 @@ router.get('/active', authMiddleware, async (req, res) => {
 router.get('/history/:userId', authMiddleware, async (req, res) => {
   try {
     const { userId } = req.params;
-    const { hours = 24 } = req.query;
+    const hours = parseInt(req.query.hours) || 24;
+    const safeHours = Math.min(Math.max(hours, 1), 720);
     const result = await pool.query(`
       SELECT id, ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude,
         speed, heading, accuracy, recorded_at
       FROM tracking_positions
-      WHERE user_id = $1 AND recorded_at >= NOW() - INTERVAL '${parseInt(hours)} hours'
+      WHERE user_id = $1 AND recorded_at >= NOW() - ($2 || ' hours')::INTERVAL
       ORDER BY recorded_at ASC
-    `, [userId]);
+    `, [userId, safeHours]);
     res.json({ success: true, data: result.rows });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Gagal mengambil history' });
@@ -74,7 +75,8 @@ router.get('/history/:userId', authMiddleware, async (req, res) => {
 router.get('/path/:userId', authMiddleware, async (req, res) => {
   try {
     const { userId } = req.params;
-    const { hours = 24 } = req.query;
+    const hours = parseInt(req.query.hours) || 24;
+    const safeHours = Math.min(Math.max(hours, 1), 720);
     const result = await pool.query(`
       SELECT ST_AsGeoJSON(
         ST_MakeLine(location::geometry ORDER BY recorded_at)
@@ -86,8 +88,8 @@ router.get('/path/:userId', authMiddleware, async (req, res) => {
         )
       ) AS total_distance_m
       FROM tracking_positions
-      WHERE user_id = $1 AND recorded_at >= NOW() - INTERVAL '${parseInt(hours)} hours'
-    `, [userId]);
+      WHERE user_id = $1 AND recorded_at >= NOW() - ($2 || ' hours')::INTERVAL
+    `, [userId, safeHours]);
     res.json({ success: true, data: result.rows[0] });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Gagal mengambil jalur' });

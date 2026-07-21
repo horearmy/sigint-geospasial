@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useToast } from '../App'
+import { formatCoordinate } from '../utils/coordinates'
 
 export default function DetailPanel({ laporan, onEdit, onDelete, onClose, getKategoriColor, getKategoriIcon, onComment }) {
   const addToast = useToast()
@@ -28,12 +29,14 @@ export default function DetailPanel({ laporan, onEdit, onDelete, onClose, getKat
             </span>
             {laporan.lokasi_nama && <span className="detail-meta-item">📍 {laporan.lokasi_nama}</span>}
             <span className="detail-meta-item">🌐 {parseFloat(laporan.latitude).toFixed(6)}, {parseFloat(laporan.longitude).toFixed(6)}</span>
+            <span className="detail-meta-item" style={{ fontFamily: 'monospace', color: '#c9a84c', fontWeight: 600 }}>🔷 {formatCoordinate(laporan.latitude, laporan.longitude, 'mgrs')}</span>
+            <span className="detail-meta-item" style={{ fontFamily: 'monospace', color: '#86efac' }}>🔷 {formatCoordinate(laporan.latitude, laporan.longitude, 'utm')}</span>
             <span className="detail-meta-item">🕐 {new Date(laporan.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
           </div>
           {laporan.deskripsi && <p className="detail-desc">{laporan.deskripsi}</p>}
         </div>
         <div className="detail-actions" style={{ flexDirection: 'column', gap: '6px' }}>
-          <button className="btn btn-ghost btn-sm" onClick={onComment} style={{ color: '#2563eb', border: '1px solid #2563eb' }}>💬</button>
+          <button className="btn btn-ghost btn-sm" onClick={onComment} style={{ color: '#1b4332', border: '1px solid #1b4332' }}>💬</button>
           <button className="btn btn-primary btn-sm" onClick={() => onEdit(laporan)}>✏️</button>
           <button className="btn btn-danger btn-sm" onClick={handleDelete}>🗑️</button>
         </div>

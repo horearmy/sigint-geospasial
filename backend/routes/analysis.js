@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
+const { authMiddleware } = require('../middleware/auth');
 
-router.get('/hotspots', async (req, res) => {
+router.get('/hotspots', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(`
       WITH clustered AS (
@@ -27,7 +28,7 @@ router.get('/hotspots', async (req, res) => {
   }
 });
 
-router.get('/trends', async (req, res) => {
+router.get('/trends', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT to_char(created_at, 'YYYY-MM-DD') AS period_label,
@@ -44,7 +45,7 @@ router.get('/trends', async (req, res) => {
   }
 });
 
-router.get('/anomalies', async (req, res) => {
+router.get('/anomalies', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(`
       WITH daily_counts AS (
@@ -72,7 +73,7 @@ router.get('/anomalies', async (req, res) => {
   }
 });
 
-router.get('/spatial', async (req, res) => {
+router.get('/spatial', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT kategori, COUNT(*) AS total,

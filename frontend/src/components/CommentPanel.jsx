@@ -60,7 +60,7 @@ export default function CommentPanel({ laporanId, onClose }) {
   }
 
   const getRoleBadge = (role) => {
-    const colors = { admin: '#ef4444', analis: '#8b5cf6', operator: '#2563eb', viewer: '#64748b' }
+    const colors = { admin: '#ef4444', analis: '#8b5cf6', operator: '#1b4332', viewer: '#64748b' }
     return (
       <span style={{
         padding: '1px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600,
@@ -100,7 +100,7 @@ export default function CommentPanel({ laporanId, onClose }) {
                 padding: '12px', borderRadius: '8px', marginBottom: '8px',
                 background: c.parent_id ? '#f8fafc' : '#f1f5f9',
                 marginLeft: c.parent_id ? '20px' : '0',
-                borderLeft: c.parent_id ? '3px solid #2563eb' : 'none',
+                borderLeft: c.parent_id ? '3px solid #1b4332' : 'none',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <div>
@@ -116,7 +116,7 @@ export default function CommentPanel({ laporanId, onClose }) {
                   {user && (
                     <button
                       onClick={() => setReplyTo(c)}
-                      style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 500 }}
+                      style={{ background: 'none', border: 'none', color: '#1b4332', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 500 }}
                     >Balas</button>
                   )}
                   {user && (c.user_id === user.id || user.role === 'admin') && (

@@ -129,7 +129,7 @@ export default function LiveTracking({ onClose }) {
                   style={{
                     padding: '10px', borderRadius: '8px', marginBottom: '4px', cursor: 'pointer',
                     background: selectedUser?.user_id === u.user_id ? '#eff6ff' : 'transparent',
-                    border: selectedUser?.user_id === u.user_id ? '1px solid #2563eb' : '1px solid transparent',
+                    border: selectedUser?.user_id === u.user_id ? '1px solid #1b4332' : '1px solid transparent',
                     transition: 'all 0.2s',
                   }}>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{u.full_name || u.username}</div>
@@ -157,7 +157,7 @@ export default function LiveTracking({ onClose }) {
                   eventHandlers={{ click: () => handleSelectUser(u) }} />
               ))}
               {pathCoords.length > 0 && (
-                <Polyline positions={pathCoords} pathOptions={{ color: '#2563eb', weight: 3, dashArray: '8 4' }} />
+                <Polyline positions={pathCoords} pathOptions={{ color: '#1b4332', weight: 3, dashArray: '8 4' }} />
               )}
             </MapContainer>
 

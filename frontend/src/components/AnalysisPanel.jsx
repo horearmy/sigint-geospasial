@@ -53,7 +53,7 @@ export default function AnalysisPanel({ onClose }) {
               onClick={() => setActiveTab(tab)}
               style={{
                 padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                background: activeTab === tab ? '#2563eb' : 'transparent',
+                background: activeTab === tab ? '#1b4332' : 'transparent',
                 color: activeTab === tab ? 'white' : '#64748b',
                 fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s',
               }}
@@ -111,7 +111,7 @@ export default function AnalysisPanel({ onClose }) {
                           padding: '14px', borderRadius: '8px', background: '#f8fafc',
                           border: '1px solid #e2e8f0', textAlign: 'center',
                         }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#2563eb' }}>{val || 0}</div>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1b4332' }}>{val || 0}</div>
                           <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{icon} {label}</div>
                         </div>
                       ))}
@@ -135,7 +135,7 @@ export default function AnalysisPanel({ onClose }) {
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <span style={{ fontWeight: 700, color: '#d97706' }}>{a.count} insiden</span>
                           <span style={{
-                            background: '#f59e0b', color: 'white', padding: '2px 8px',
+                            background: '#c9a84c', color: 'white', padding: '2px 8px',
                             borderRadius: '10px', fontSize: '0.75rem', fontWeight: 600,
                           }}>z: {a.z_score}</span>
                         </div>
@@ -151,7 +151,7 @@ export default function AnalysisPanel({ onClose }) {
                     Distribusi spasial per kategori
                   </p>
                   {spatial.map((s, i) => {
-                    const colors = { 'Banjir': '#2563eb', 'Gempa Bumi': '#ef4444', 'Kebakaran': '#f97316', 'Longsor': '#854d0e', 'Angin Kencang': '#6366f1', 'Kekeringan': '#eab308', 'Bencana Lainnya': '#a855f7', 'Berita Umum': '#22c55e' }
+                    const colors = { 'Gangguan Keamanan': '#ef4444', 'Separatisme': '#7c3aed', 'Terorisme': '#dc2626', 'Radikalisme': '#ea580c', 'Keamanan Nasional': '#1b4332', 'Politik': '#0891b2', 'Sosial': '#16a34a', 'Ekonomi': '#c9a84c', 'Informasi Lain': '#6366f1' }
                     return (
                       <div key={i} style={{
                         padding: '14px', borderRadius: '8px', marginBottom: '8px',

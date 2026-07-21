@@ -11,8 +11,8 @@ router.post('/register', async (req, res) => {
     if (!username || !email || !password) {
       return res.status(400).json({ success: false, error: 'Username, email, dan password wajib diisi' });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, error: 'Password minimal 6 karakter' });
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, error: 'Password minimal 8 karakter' });
     }
 
     const existing = await pool.query('SELECT id FROM users WHERE username = $1 OR email = $2', [username, email]);
@@ -87,6 +87,57 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
+router.put('/profile', authMiddleware, async (req, res) => {
+  try {
+    const { full_name, email, avatar_url, bio, preferences } = req.body;
+    const result = await pool.query(
+      `UPDATE users SET
+        full_name = COALESCE($1, full_name),
+        email = COALESCE($2, email),
+        avatar_url = COALESCE($3, avatar_url)
+       WHERE id = $4
+       RETURNING id, username, email, full_name, role, avatar_url, created_at`,
+      [full_name, email, avatar_url, req.user.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User tidak ditemukan' });
+    }
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error('Profile update error:', err);
+    res.status(500).json({ success: false, error: 'Gagal update profile' });
+  }
+});
+
+router.put('/password', authMiddleware, async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) {
+      return res.status(400).json({ success: false, error: 'Password lama dan baru wajib diisi' });
+    }
+    if (new_password.length < 8) {
+      return res.status(400).json({ success: false, error: 'Password baru minimal 8 karakter' });
+    }
+
+    const userResult = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User tidak ditemukan' });
+    }
+
+    const valid = await bcrypt.compare(current_password, userResult.rows[0].password_hash);
+    if (!valid) {
+      return res.status(401).json({ success: false, error: 'Password lama salah' });
+    }
+
+    const newHash = await bcrypt.hash(new_password, 10);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, req.user.id]);
+    res.json({ success: true, message: 'Password berhasil diubah' });
+  } catch (err) {
+    console.error('Password change error:', err);
+    res.status(500).json({ success: false, error: 'Gagal mengubah password' });
+  }
+});
+
 router.get('/users', authMiddleware, roleMiddleware('admin'), async (req, res) => {
   try {
     const result = await pool.query(
@@ -138,7 +189,10 @@ router.put('/users/:id/toggle-active', authMiddleware, roleMiddleware('admin'), 
 router.post('/create-admin', async (req, res) => {
   try {
     const { username, email, password, full_name, secret } = req.body;
-    if (secret !== (process.env.ADMIN_SECRET || 'sigint-admin-2024')) {
+    if (!process.env.ADMIN_SECRET) {
+      return res.status(500).json({ success: false, error: 'ADMIN_SECRET belum dikonfigurasi' });
+    }
+    if (!secret || secret !== process.env.ADMIN_SECRET) {
       return res.status(403).json({ success: false, error: 'Secret tidak valid' });
     }
 
@@ -147,7 +201,17 @@ router.post('/create-admin', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Username sudah ada' });
     }
 
-    const password_hash = await bcrypt.hash(password, 10);
+    if (!password || password.length < 8) {
+      return res.status(400).json({ success: false, error: 'Password minimal 8 karakter' });
+    }
+    if (!username || username.length < 4) {
+      return res.status(400).json({ success: false, error: 'Username minimal 4 karakter' });
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ success: false, error: 'Email tidak valid' });
+    }
+
+    const password_hash = await bcrypt.hash(password, 12);
     const result = await pool.query(
       `INSERT INTO users (username, email, password_hash, full_name, role)
        VALUES ($1, $2, $3, $4, 'admin')

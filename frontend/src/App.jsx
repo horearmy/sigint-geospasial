@@ -26,19 +26,24 @@ import WorkflowPanel from './components/WorkflowPanel'
 import KeyboardShortcutsHandler from './components/KeyboardShortcuts'
 import MobileNav from './components/MobileNav'
 import { DashboardSkeleton, ListSkeleton } from './components/SkeletonLoader'
+import PwaInstallPrompt from './components/PwaInstallPrompt'
+import ProfilePage from './components/ProfilePage'
+import DrawingPanel from './components/DrawingPanel'
+import { useRealtimeLaporan, useRealtimeNotifications } from './hooks/useSocket'
 
 const API = '/api/laporan'
 const REFRESH_INTERVAL = 30000
 
 const KATEGORI_COLORS = {
-  'Banjir': '#2563eb', 'Gempa Bumi': '#ef4444', 'Kebakaran': '#f97316',
-  'Longsor': '#854d0e', 'Angin Kencang': '#6366f1', 'Kekeringan': '#eab308',
-  'Bencana Lainnya': '#a855f7', 'Berita Umum': '#22c55e',
+  'Gangguan Keamanan': '#ef4444', 'Separatisme': '#7c3aed', 'Terorisme': '#dc2626',
+  'Radikalisme': '#ea580c', 'Keamanan Nasional': '#1b4332', 'Politik': '#0891b2',
+  'Sosial': '#16a34a', 'Ekonomi': '#ca8a04', 'Informasi Lain': '#c9a84c',
 }
 
 const KATEGORI_ICONS = {
-  'Banjir': '🌊', 'Gempa Bumi': '🏚️', 'Kebakaran': '🔥', 'Longsor': '⛰️',
-  'Angin Kencang': '🌪️', 'Kekeringan': '☀️', 'Bencana Lainnya': '⚠️', 'Berita Umum': '📰',
+  'Gangguan Keamanan': '🚨', 'Separatisme': '🏴', 'Terorisme': '💣',
+  'Radikalisme': '⚔️', 'Keamanan Nasional': '🛡️', 'Politik': '🏛️',
+  'Sosial': '👥', 'Ekonomi': '💰', 'Informasi Lain': '📢',
 }
 
 export const ToastContext = createContext()
@@ -110,7 +115,8 @@ function AutoRefreshBar({ onRefresh, interval }) {
 }
 
 function AppContent() {
-  const { user, loading: authLoading, logout } = useAuth()
+  const { user, setUser, loading: authLoading, logout, token } = useAuth()
+  const addToast = useToast()
   const [laporan, setLaporan] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editingLaporan, setEditingLaporan] = useState(null)
@@ -137,6 +143,15 @@ function AppContent() {
   const [showPredictive, setShowPredictive] = useState(false)
   const [showWorkflow, setShowWorkflow] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [drawingEnabled, setDrawingEnabled] = useState(false)
+  const [coordFormat, setCoordFormat] = useState('mgrs')
+  const [drawings, setDrawings] = useState([])
+  const [showDrawingPanel, setShowDrawingPanel] = useState(false)
+  const [selectedKategori, setSelectedKategori] = useState(null)
+  const [flyToTarget, setFlyToTarget] = useState(null)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -160,22 +175,62 @@ function AppContent() {
     try { const res = await axios.get(`${API}/stats`); setStats(res.data.data) } catch (err) { console.error(err) }
   }, [])
 
+  const fetchDrawings = useCallback(async () => {
+    try { const res = await axios.get('/api/drawings'); setDrawings(res.data.data) } catch (err) { console.error(err) }
+  }, [])
+
   const refreshAll = useCallback(() => {
     fetchLaporan()
     fetchStats()
-  }, [fetchLaporan, fetchStats])
+    fetchDrawings()
+  }, [fetchLaporan, fetchStats, fetchDrawings])
 
-  useEffect(() => { if (user) { fetchLaporan(); fetchStats() } }, [fetchLaporan, fetchStats, user])
+  useEffect(() => { if (user) { fetchLaporan(); fetchStats(); fetchDrawings() } }, [fetchLaporan, fetchStats, fetchDrawings, user])
+
+  const handleNewLaporan = useCallback((data) => {
+    setLaporan(prev => [data, ...prev])
+    fetchStats()
+  }, [fetchStats])
+
+  const handleUpdateLaporan = useCallback((data) => {
+    setLaporan(prev => prev.map(l => l.id === data.id ? data : l))
+    fetchStats()
+  }, [fetchStats])
+
+  const handleDeleteLaporan = useCallback((data) => {
+    setLaporan(prev => prev.filter(l => l.id !== data.id))
+    fetchStats()
+  }, [fetchStats])
+
+  const rtConnected = useRealtimeLaporan(token, handleNewLaporan, handleUpdateLaporan, handleDeleteLaporan)
+
+  const handleNotification = useCallback((notif) => {
+    addToast(notif.message || 'Notifikasi baru', 'info')
+  }, [addToast])
+  useRealtimeNotifications(token, handleNotification)
+
+  useEffect(() => {
+    const onOnline = () => setIsOnline(true)
+    const onOffline = () => setIsOnline(false)
+    window.addEventListener('online', onOnline)
+    window.addEventListener('offline', onOffline)
+    return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline) }
+  }, [])
 
   const handleSave = async (formData) => {
     try {
       if (editingLaporan) {
         await axios.put(`${API}/${editingLaporan.id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+        addToast('Laporan berhasil diperbarui', 'success')
       } else {
         await axios.post(API, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+        addToast('Laporan berhasil dikirim', 'success')
       }
       setShowForm(false); setEditingLaporan(null); setPickLocation(null); fetchLaporan(); fetchStats()
-    } catch (err) { throw err }
+    } catch (err) {
+      addToast(err?.response?.data?.error || 'Gagal menyimpan laporan', 'error')
+      throw err
+    }
   }
 
   const handleDelete = async (id) => {
@@ -183,7 +238,17 @@ function AppContent() {
   }
 
   const handleEdit = (l) => { setEditingLaporan(l); setShowForm(true); setSelectedLaporan(null) }
-  const handleMapClick = (lat, lng) => { if (showForm) setPickLocation({ lat, lng }) }
+  const handleMapClick = (lat, lng) => {
+    if (showForm) {
+      setPickLocation({ lat, lng })
+    } else {
+      setEditingLaporan(null)
+      setPickLocation({ lat, lng })
+      setSelectedKategori(null)
+      setShowForm(true)
+      setCurrentView('map')
+    }
+  }
 
   const handleExport = async (format) => {
     try {
@@ -201,7 +266,57 @@ function AppContent() {
     setShowThreatZones(false); setShowAnalysis(false); setShowTimeline(false)
     setShowAdvSearch(false); setShowAuditLog(false); setShowOsintFeed(false)
     setShowLiveTracking(false); setShowSatellite(false); setShowPredictive(false)
-    setShowWorkflow(false); setEditingLaporan(null); setSelectedLaporan(null)
+    setShowWorkflow(false); setShowDrawingPanel(false)
+    setEditingLaporan(null); setSelectedLaporan(null)
+  }, [])
+
+  const handleShapeCreated = useCallback(async (e) => {
+    const layer = e.layer
+    const type = e.layerType
+    let coordinates = {}
+    let name = ''
+
+    if (type === 'marker') {
+      const ll = layer.getLatLng()
+      coordinates = { lat: ll.lat, lng: ll.lng }
+      name = 'Marker'
+    } else if (type === 'polyline') {
+      const lls = layer.getLatLngs()
+      coordinates = { points: lls.map(ll => ({ lat: ll.lat, lng: ll.lng })) }
+      name = 'Jalur'
+    } else if (type === 'polygon') {
+      const lls = layer.getLatLngs()[0]
+      coordinates = { points: lls.map(ll => ({ lat: ll.lat, lng: ll.lng })) }
+      name = 'Area'
+    }
+
+    try {
+      await axios.post('/api/drawings', {
+        name, shape_type: type, coordinates,
+        color: '#1b4332', stroke_width: 3, fill_opacity: 0.2,
+      })
+      fetchDrawings()
+      addToast(`${name} berhasil disimpan`, 'success')
+    } catch (err) {
+      console.error(err)
+    }
+  }, [fetchDrawings, addToast])
+
+  const handleSelectDrawing = useCallback((drawing) => {
+    if (!drawing?.coordinates) return
+    if (drawing.shape_type === 'marker') {
+      setFlyToTarget({ lat: drawing.coordinates.lat, lng: drawing.coordinates.lng, zoom: 14 })
+    } else if (drawing.shape_type === 'polyline' && drawing.coordinates.points?.length) {
+      const pts = drawing.coordinates.points
+      const lat = pts.reduce((s, p) => s + p.lat, 0) / pts.length
+      const lng = pts.reduce((s, p) => s + p.lng, 0) / pts.length
+      setFlyToTarget({ lat, lng, zoom: 12 })
+    } else if (drawing.shape_type === 'polygon' && drawing.coordinates.points?.length) {
+      const pts = drawing.coordinates.points
+      const lat = pts.reduce((s, p) => s + p.lat, 0) / pts.length
+      const lng = pts.reduce((s, p) => s + p.lng, 0) / pts.length
+      setFlyToTarget({ lat, lng, zoom: 12 })
+    }
   }, [])
 
   const handleKeyboardAction = useCallback((shortcut) => {
@@ -247,11 +362,16 @@ function AppContent() {
 
   const anyPanelOpen = showForm || showUserMgmt || showComments || showThreatZones || showAnalysis ||
     showTimeline || showAdvSearch || showAuditLog || showOsintFeed || showLiveTracking ||
-    showSatellite || showPredictive || showWorkflow
+    showSatellite || showPredictive || showWorkflow || showProfile || showDrawingPanel
 
   return (
     <div className="app">
       <KeyboardShortcutsHandler onAction={handleKeyboardAction} />
+      <PwaInstallPrompt />
+
+      {!isOnline && (
+        <div className="offline-banner">📡 Anda sedang offline — data mungkin tidak terbaru</div>
+      )}
 
       <header className="header">
         <MobileNav currentView={currentView} setCurrentView={setCurrentView}
@@ -259,13 +379,11 @@ function AppContent() {
           user={user} logout={logout} />
 
         <div className="header-left">
-          <motion.div className="header-logo"
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, repeatDelay: 10 }}>
-            🌐
-          </motion.div>
+          <div className="header-logo">
+            <img src="/logo.png" alt="Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+          </div>
           <div>
-            <h1>SIGINT</h1>
+            <h1>SIGINT KOSTRAD</h1>
             <span className="header-subtitle">Sistem Intelijen Geospasial</span>
           </div>
         </div>
@@ -297,12 +415,34 @@ function AppContent() {
           <button className="btn btn-ghost" onClick={() => setShowThreatZones(true)}>🛡️</button>
           <button className="btn btn-ghost" onClick={() => setShowOsintFeed(true)}>🔍 OSINT</button>
           <button className="btn btn-ghost" onClick={() => setShowWorkflow(true)}>📋</button>
+          <button className="btn btn-ghost" onClick={() => { setShowDrawingPanel(true); fetchDrawings() }}>🗺️ Hasil Gambar</button>
           {user.role === 'admin' && (
             <button className="btn btn-ghost" onClick={() => setShowAuditLog(true)}>📝 Audit</button>
           )}
 
           {user.role !== 'viewer' && (
             <button className="btn btn-ghost" onClick={() => { setEditingLaporan(null); setPickLocation(null); setShowForm(true); setCurrentView('map') }}>+ Baru</button>
+          )}
+
+          {currentView === 'map' && (
+            <>
+              <button className={`btn btn-ghost ${drawingEnabled ? 'btn-active-gold' : ''}`}
+                onClick={() => setDrawingEnabled(!drawingEnabled)}
+                title={drawingEnabled ? 'Nonaktifkan alat gambar' : 'Aktifkan alat gambar'}>
+                ✏️ Gambar
+              </button>
+              <select
+                className="coord-format-select"
+                value={coordFormat}
+                onChange={(e) => setCoordFormat(e.target.value)}
+                title="Format koordinat"
+              >
+                <option value="mgrs">MGRS</option>
+                <option value="utm">UTM</option>
+                <option value="dms">DMS</option>
+                <option value="dd">Desimal</option>
+              </select>
+            </>
           )}
 
           {user.role === 'admin' && (
@@ -314,9 +454,31 @@ function AppContent() {
 
           <div style={{ position: 'relative' }}>
             <button className="btn btn-ghost" style={{ fontSize: '0.78rem', padding: '4px 10px' }}
-              onClick={logout}>
-              {user.username} 🚪
+              onClick={() => setShowUserMenu(!showUserMenu)}>
+              {user.username} 👤
             </button>
+            {showUserMenu && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setShowUserMenu(false)} />
+                <motion.div className="user-dropdown"
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}>
+                  <div className="user-dropdown-header">
+                    <span style={{ fontWeight: 700 }}>{user.username}</span>
+                    <span className="user-dropdown-role">{user.role}</span>
+                  </div>
+                  <div className="user-dropdown-divider" />
+                  <button className="user-dropdown-item" onClick={() => { setShowUserMenu(false); setShowProfile(true) }}>
+                    👤 Profil
+                  </button>
+                  <button className="user-dropdown-item danger" onClick={logout}>
+                    🚪 Logout
+                  </button>
+                </motion.div>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -372,10 +534,24 @@ function AppContent() {
                   </>
                 )}
               </aside>
-              <div className="map-container">
-                <MapView laporan={laporan} selectedId={selectedLaporan?.id} onSelect={setSelectedLaporan}
-                  onMapClick={handleMapClick} pickLocation={pickLocation} center={mapCenter} showForm={showForm}
-                  getKategoriColor={getKategoriColor} getKategoriIcon={getKategoriIcon} />
+              <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+                <div className="map-container" style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+                  <MapView laporan={laporan} selectedId={selectedLaporan?.id} onSelect={setSelectedLaporan}
+                    onMapClick={handleMapClick} pickLocation={pickLocation} center={mapCenter} showForm={showForm}
+                    getKategoriColor={getKategoriColor} getKategoriIcon={getKategoriIcon}
+                    drawingEnabled={drawingEnabled} coordFormat={coordFormat}
+                    drawings={drawings} onShapeCreated={handleShapeCreated}
+                    selectedKategori={selectedKategori} flyToTarget={flyToTarget}
+                    onFlyToDone={() => setFlyToTarget(null)} />
+                </div>
+                <AnimatePresence>
+                  {showForm && (
+                    <LaporanForm laporan={editingLaporan} pickLocation={pickLocation} onSave={handleSave}
+                      onClose={() => { setShowForm(false); setEditingLaporan(null); setPickLocation(null); setSelectedKategori(null) }}
+                      kategoriList={Object.keys(KATEGORI_COLORS)} getKategoriIcon={getKategoriIcon}
+                      onKategoriChange={setSelectedKategori} onFlyTo={setFlyToTarget} onPickLocation={setPickLocation} />
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           )}
@@ -401,12 +577,9 @@ function AppContent() {
         </motion.button>
       )}
 
-      <AutoRefreshBar onRefresh={refreshAll} interval={REFRESH_INTERVAL} />
+      {!showForm && <AutoRefreshBar onRefresh={refreshAll} interval={REFRESH_INTERVAL} />}
 
       <AnimatePresence>
-        {showForm && <LaporanForm laporan={editingLaporan} pickLocation={pickLocation} onSave={handleSave}
-          onClose={() => { setShowForm(false); setEditingLaporan(null); setPickLocation(null) }}
-          kategoriList={Object.keys(KATEGORI_COLORS)} getKategoriIcon={getKategoriIcon} />}
         {showUserMgmt && <UserManagement onClose={() => setShowUserMgmt(false)} />}
         {showComments && selectedLaporan && <CommentPanel laporanId={selectedLaporan.id} onClose={() => setShowComments(false)} />}
         {showThreatZones && <ThreatZonesPanel onClose={() => setShowThreatZones(false)} />}
@@ -419,7 +592,22 @@ function AppContent() {
         {showSatellite && <SatelliteView laporan={laporan} onClose={() => setShowSatellite(false)} />}
         {showPredictive && <PredictivePanel onClose={() => setShowPredictive(false)} />}
         {showWorkflow && <WorkflowPanel laporanList={laporan} onClose={() => setShowWorkflow(false)} />}
+        {showProfile && <ProfilePage onClose={() => setShowProfile(false)} />}
+        {showDrawingPanel && <DrawingPanel drawings={drawings} onRefresh={fetchDrawings} onClose={() => setShowDrawingPanel(false)} onSelectDrawing={handleSelectDrawing} />}
       </AnimatePresence>
+
+      {rtConnected !== undefined && (
+        <div style={{
+          position: 'fixed', top: 'calc(var(--header-height) + 4px)', right: 12,
+          display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem',
+          color: rtConnected ? 'var(--success)' : 'var(--text-light)',
+          background: 'var(--card)', padding: '3px 10px', borderRadius: 'var(--radius-full)',
+          boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)', zIndex: 800,
+        }}>
+          <span className="live-pulse" style={{ width: 6, height: 6 }} />
+          {rtConnected ? 'Real-time' : 'Offline'}
+        </div>
+      )}
     </div>
   )
 }

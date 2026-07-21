@@ -1,0 +1,22 @@
+{
+  "name": "SIGINT KOSTRAD - Sistem Intelijen Geospasial",
+  "short_name": "SIGINT KOSTRAD",
+  "description": "Sistem pelaporan dan analisis intelijen geospasial",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#051510",
+  "theme_color": "#1b4332",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "id",
+  "categories": ["security", "utilities", "maps"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "prefer_related_applications": false
+}

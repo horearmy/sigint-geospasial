@@ -16,7 +16,7 @@ const IMAGERY_LAYERS = [
 const OVERLAY_LAYERS = [
   { id: 'heat', name: '🔥 Heatmap Insiden', color: '#ef4444' },
   { id: 'ndvi', name: '🌿 NDVI Vegetation', color: '#22c55e' },
-  { id: 'water', name: '💧 NDWI Air', color: '#2563eb' },
+  { id: 'water', name: '💧 NDWI Air', color: '#1b4332' },
   { id: 'zones', name: '🛡️ Threat Zones', color: '#f59e0b' },
 ]
 
@@ -71,7 +71,7 @@ export default function SatelliteView({ laporan, onClose }) {
                 style={{
                   padding: '8px 10px', borderRadius: '6px', marginBottom: '4px', cursor: 'pointer',
                   background: baseLayer === l.id ? '#eff6ff' : 'transparent',
-                  border: baseLayer === l.id ? '1px solid #2563eb' : '1px solid transparent',
+                  border: baseLayer === l.id ? '1px solid #1b4332' : '1px solid transparent',
                   fontSize: '0.82rem', fontWeight: baseLayer === l.id ? 600 : 400,
                   transition: 'all 0.2s',
                 }}>{l.name}</div>

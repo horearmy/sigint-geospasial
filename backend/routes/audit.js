@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require('../db/pool');
 const { authMiddleware, roleMiddleware } = require('../middleware/auth');
 
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', authMiddleware, roleMiddleware('admin'), async (req, res) => {
   try {
     const { page = 1, limit = 50 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
