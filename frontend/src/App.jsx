@@ -397,56 +397,71 @@ function AppContent() {
         </div>
 
         <div className="header-actions">
-          {currentView === 'map' && (
-            <div style={{ position: 'relative' }}>
-              <button className="btn btn-ghost" onClick={() => setShowExport(!showExport)}>📥 Export</button>
-              {showExport && (
-                <div className="export-menu">
-                  <button onClick={() => handleExport('csv')}>📄 CSV</button>
-                  <button onClick={() => handleExport('geojson')}>🌐 GeoJSON</button>
-                  <button onClick={() => window.open('/api/export/pdf', '_blank')}>📑 PDF Report</button>
-                </div>
-              )}
-            </div>
-          )}
-
-          <button className="btn btn-ghost" onClick={() => setShowTimeline(true)}>⏱️</button>
-          <button className="btn btn-ghost" onClick={() => setShowAnalysis(true)}>🧠</button>
-          <button className="btn btn-ghost" onClick={() => setShowThreatZones(true)}>🛡️</button>
-          <button className="btn btn-ghost" onClick={() => setShowOsintFeed(true)}>🔍 OSINT</button>
-          <button className="btn btn-ghost" onClick={() => setShowWorkflow(true)}>📋</button>
-          <button className="btn btn-ghost" onClick={() => { setShowDrawingPanel(true); fetchDrawings() }}>🗺️ Hasil Gambar</button>
-          {user.role === 'admin' && (
-            <button className="btn btn-ghost" onClick={() => setShowAuditLog(true)}>📝 Audit</button>
-          )}
+          <div style={{ position: 'relative' }}>
+            <button className="btn btn-ghost header-menu-trigger" onClick={() => setShowExport(!showExport)}>
+              🔧 Menu <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>▾</span>
+            </button>
+            {showExport && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 998 }} onClick={() => setShowExport(false)} />
+                <motion.div className="header-dropdown"
+                  initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                  transition={{ duration: 0.15 }}>
+                  <div className="header-dropdown-section">
+                    <div className="header-dropdown-label">Intelijen</div>
+                    <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowTimeline(true) }}>⏱️ Timeline</button>
+                    <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowAnalysis(true) }}>🧠 Analisis</button>
+                    <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowThreatZones(true) }}>🛡️ Zona Ancaman</button>
+                    <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowOsintFeed(true) }}>🔍 OSINT Feed</button>
+                    <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowWorkflow(true) }}>📋 Workflow</button>
+                    {user.role === 'admin' && (
+                      <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowAuditLog(true) }}>📝 Audit Log</button>
+                    )}
+                    {user.role === 'admin' && (
+                      <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowUserMgmt(true) }}>👥 Kelola User</button>
+                    )}
+                  </div>
+                  {currentView === 'map' && (
+                    <div className="header-dropdown-section">
+                      <div className="header-dropdown-label">Peta</div>
+                      <button className={`header-dropdown-item ${drawingEnabled ? 'active' : ''}`}
+                        onClick={() => { setDrawingEnabled(!drawingEnabled) }}>
+                        {drawingEnabled ? '✅' : '✏️'} Alat Gambar
+                      </button>
+                      <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowDrawingPanel(true); fetchDrawings() }}>
+                        🗺️ Hasil Gambar
+                      </button>
+                      <div className="header-dropdown-divider" />
+                      <div className="header-dropdown-item" style={{ cursor: 'default', padding: '6px 14px' }}>
+                        <span style={{ fontSize: '0.78rem', opacity: 0.7 }}>Format:</span>
+                        <select className="coord-format-select-mini" value={coordFormat}
+                          onChange={(e) => setCoordFormat(e.target.value)}>
+                          <option value="mgrs">MGRS</option>
+                          <option value="utm">UTM</option>
+                          <option value="dms">DMS</option>
+                          <option value="dd">Desimal</option>
+                        </select>
+                      </div>
+                      <div className="header-dropdown-divider" />
+                      <div className="header-dropdown-item" style={{ cursor: 'default' }}>
+                        <span style={{ fontSize: '0.78rem', opacity: 0.7 }}>Export:</span>
+                        <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
+                          <button className="header-export-btn" onClick={() => { setShowExport(false); handleExport('csv') }}>CSV</button>
+                          <button className="header-export-btn" onClick={() => { setShowExport(false); handleExport('geojson') }}>GeoJSON</button>
+                          <button className="header-export-btn" onClick={() => { setShowExport(false); window.open('/api/export/pdf', '_blank') }}>PDF</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              </>
+            )}
+          </div>
 
           {user.role !== 'viewer' && (
-            <button className="btn btn-ghost" onClick={() => { setEditingLaporan(null); setPickLocation(null); setShowForm(true); setCurrentView('map') }}>+ Baru</button>
-          )}
-
-          {currentView === 'map' && (
-            <>
-              <button className={`btn btn-ghost ${drawingEnabled ? 'btn-active-gold' : ''}`}
-                onClick={() => setDrawingEnabled(!drawingEnabled)}
-                title={drawingEnabled ? 'Nonaktifkan alat gambar' : 'Aktifkan alat gambar'}>
-                ✏️ Gambar
-              </button>
-              <select
-                className="coord-format-select"
-                value={coordFormat}
-                onChange={(e) => setCoordFormat(e.target.value)}
-                title="Format koordinat"
-              >
-                <option value="mgrs">MGRS</option>
-                <option value="utm">UTM</option>
-                <option value="dms">DMS</option>
-                <option value="dd">Desimal</option>
-              </select>
-            </>
-          )}
-
-          {user.role === 'admin' && (
-            <button className="btn btn-ghost" onClick={() => setShowUserMgmt(true)}>👥</button>
+            <button className="btn btn-ghost btn-new-report" onClick={() => { setEditingLaporan(null); setPickLocation(null); setShowForm(true); setCurrentView('map') }}>+ Baru</button>
           )}
 
           <NotificationBell />
