@@ -123,7 +123,6 @@ function AppContent() {
   const [selectedLaporan, setSelectedLaporan] = useState(null)
   const [filter, setFilter] = useState({ kategori: '', search: '' })
   const [pickLocation, setPickLocation] = useState(null)
-  const [showExport, setShowExport] = useState(false)
   const [stats, setStats] = useState(null)
   const [mapCenter] = useState([-2.5489, 118.0149])
   const [currentView, setCurrentView] = useState('map')
@@ -150,6 +149,7 @@ function AppContent() {
   const [coordFormat, setCoordFormat] = useState('mgrs')
   const [drawings, setDrawings] = useState([])
   const [showDrawingPanel, setShowDrawingPanel] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
   const [selectedKategori, setSelectedKategori] = useState(null)
   const [flyToTarget, setFlyToTarget] = useState(null)
 
@@ -253,10 +253,34 @@ function AppContent() {
   const handleExport = async (format) => {
     try {
       const res = await axios.get(`${API}/export`, { params: { format }, responseType: 'blob' })
-      const url = window.URL.createObjectURL(new Blob([res.data]))
-      const a = document.createElement('a'); a.href = url; a.download = `laporan.${format === 'geojson' ? 'geojson' : 'csv'}`; a.click()
-      window.URL.revokeObjectURL(url); setShowExport(false)
-    } catch (err) { console.error(err) }
+      const blob = new Blob([res.data])
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `laporan.${format === 'geojson' ? 'geojson' : 'csv'}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => window.URL.revokeObjectURL(url), 3000)
+      addToast(`Export ${format.toUpperCase()} berhasil diunduh`, 'success')
+    } catch (err) {
+      console.error(err)
+      addToast(`Gagal export ${format.toUpperCase()}`, 'error')
+    }
+  }
+
+  const handleExportPDF = async () => {
+    try {
+      const res = await axios.get('/api/export/pdf', { responseType: 'blob' })
+      const blob = new Blob([res.data], { type: 'text/html' })
+      const url = window.URL.createObjectURL(blob)
+      window.open(url, '_blank')
+      setTimeout(() => window.URL.revokeObjectURL(url), 5000)
+      addToast('PDF Report berhasil dibuka', 'success')
+    } catch (err) {
+      console.error(err)
+      addToast('Gagal export PDF', 'error')
+    }
   }
 
   const handleAdvancedSearch = (params) => { fetchLaporan(params); setShowAdvSearch(false) }
@@ -398,12 +422,12 @@ function AppContent() {
 
         <div className="header-actions">
           <div style={{ position: 'relative' }}>
-            <button className="btn btn-ghost header-menu-trigger" onClick={() => setShowExport(!showExport)}>
+            <button className="btn btn-ghost header-menu-trigger" onClick={() => setShowMenu(!showMenu)}>
               🔧 Menu <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>▾</span>
             </button>
-            {showExport && (
+            {showMenu && (
               <>
-                <div style={{ position: 'fixed', inset: 0, zIndex: 998 }} onClick={() => setShowExport(false)} />
+                <div style={{ position: 'fixed', inset: 0, zIndex: 998 }} onClick={() => setShowMenu(false)} />
                 <motion.div className="header-dropdown"
                   initial={{ opacity: 0, y: -8, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -411,16 +435,16 @@ function AppContent() {
                   transition={{ duration: 0.15 }}>
                   <div className="header-dropdown-section">
                     <div className="header-dropdown-label">Intelijen</div>
-                    <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowTimeline(true) }}>⏱️ Timeline</button>
-                    <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowAnalysis(true) }}>🧠 Analisis</button>
-                    <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowThreatZones(true) }}>🛡️ Zona Ancaman</button>
-                    <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowOsintFeed(true) }}>🔍 OSINT Feed</button>
-                    <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowWorkflow(true) }}>📋 Workflow</button>
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowTimeline(true) }}>⏱️ Timeline</button>
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowAnalysis(true) }}>🧠 Analisis</button>
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowThreatZones(true) }}>🛡️ Zona Ancaman</button>
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowOsintFeed(true) }}>🔍 OSINT Feed</button>
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowWorkflow(true) }}>📋 Workflow</button>
                     {user.role === 'admin' && (
-                      <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowAuditLog(true) }}>📝 Audit Log</button>
+                      <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowAuditLog(true) }}>📝 Audit Log</button>
                     )}
                     {user.role === 'admin' && (
-                      <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowUserMgmt(true) }}>👥 Kelola User</button>
+                      <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowUserMgmt(true) }}>👥 Kelola User</button>
                     )}
                   </div>
                   {currentView === 'map' && (
@@ -430,7 +454,7 @@ function AppContent() {
                         onClick={() => { setDrawingEnabled(!drawingEnabled) }}>
                         {drawingEnabled ? '✅' : '✏️'} Alat Gambar
                       </button>
-                      <button className="header-dropdown-item" onClick={() => { setShowExport(false); setShowDrawingPanel(true); fetchDrawings() }}>
+                      <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowDrawingPanel(true); fetchDrawings() }}>
                         🗺️ Hasil Gambar
                       </button>
                       <div className="header-dropdown-divider" />
@@ -444,17 +468,20 @@ function AppContent() {
                           <option value="dd">Desimal</option>
                         </select>
                       </div>
-                      <div className="header-dropdown-divider" />
-                      <div className="header-dropdown-item" style={{ cursor: 'default' }}>
-                        <span style={{ fontSize: '0.78rem', opacity: 0.7 }}>Export:</span>
-                        <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
-                          <button className="header-export-btn" onClick={() => { setShowExport(false); handleExport('csv') }}>CSV</button>
-                          <button className="header-export-btn" onClick={() => { setShowExport(false); handleExport('geojson') }}>GeoJSON</button>
-                          <button className="header-export-btn" onClick={() => { setShowExport(false); window.open('/api/export/pdf', '_blank') }}>PDF</button>
-                        </div>
-                      </div>
                     </div>
                   )}
+                  <div className="header-dropdown-section">
+                    <div className="header-dropdown-label">Export</div>
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); handleExport('csv') }}>
+                      📄 Export CSV
+                    </button>
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); handleExport('geojson') }}>
+                      🌐 Export GeoJSON
+                    </button>
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); handleExportPDF() }}>
+                      📑 PDF Report
+                    </button>
+                  </div>
                 </motion.div>
               </>
             )}
