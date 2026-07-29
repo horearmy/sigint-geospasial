@@ -33,12 +33,17 @@ router.get('/pdf', authMiddleware, async (req, res) => {
     query += ' ORDER BY created_at DESC';
     const result = await pool.query(query, params);
 
-    const statsQuery = `
+    let statsQuery = `
       SELECT COUNT(*) AS total,
         COUNT(DISTINCT kategori) AS kategori_count
-      FROM laporan
+      FROM laporan WHERE 1=1
     `;
-    const stats = await pool.query(statsQuery);
+    const statsParams = [];
+    let statsIdx = 1;
+    if (start_date) { statsQuery += ` AND created_at >= $${statsIdx++}`; statsParams.push(start_date); }
+    if (end_date) { statsQuery += ` AND created_at <= $${statsIdx++}`; statsParams.push(end_date); }
+    if (kategori) { statsQuery += ` AND kategori = $${statsIdx++}`; statsParams.push(kategori); }
+    const stats = await pool.query(statsQuery, statsParams);
 
     const html = generateReportHTML(result.rows, stats.rows[0], { start_date, end_date, kategori });
 

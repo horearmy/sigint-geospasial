@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import axios from 'axios'
+import api from '../utils/api'
 
 export default function AnalysisPanel({ onClose }) {
   const [hotspots, setHotspots] = useState([])
@@ -17,9 +17,9 @@ export default function AnalysisPanel({ onClose }) {
     setLoading(true)
     try {
       const [h, a, s] = await Promise.all([
-        axios.get('/api/analysis/hotspots'),
-        axios.get('/api/analysis/anomalies'),
-        axios.get('/api/analysis/spatial'),
+        api.get('/api/analysis/hotspots'),
+        api.get('/api/analysis/anomalies'),
+        api.get('/api/analysis/spatial'),
       ])
       setHotspots(h.data.data)
       setAnomalies(a.data.data)

@@ -3,10 +3,17 @@ const router = express.Router();
 const pool = require('../db/pool');
 const { authMiddleware, roleMiddleware } = require('../middleware/auth');
 
+function sanitizeCsv(val) {
+  const s = String(val || '').replace(/"/g, '""');
+  return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+}
+
 router.get('/', authMiddleware, roleMiddleware('admin'), async (req, res) => {
   try {
     const { page = 1, limit = 50 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const safeLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
+    const safePage = Math.max(parseInt(page) || 1, 1);
+    const offset = (safePage - 1) * safeLimit;
     const result = await pool.query(`
       SELECT al.id, al.action, al.resource, al.details, al.ip_address, al.timestamp,
         u.username, u.full_name
@@ -14,7 +21,7 @@ router.get('/', authMiddleware, roleMiddleware('admin'), async (req, res) => {
       LEFT JOIN users u ON al.user_id = u.id
       ORDER BY al.timestamp DESC
       LIMIT $1 OFFSET $2
-    `, [parseInt(limit), offset]);
+    `, [safeLimit, offset]);
     const countResult = await pool.query('SELECT COUNT(*) AS total FROM audit_log');
     res.json({ success: true, data: result.rows, total: parseInt(countResult.rows[0].total) });
   } catch (err) {
@@ -33,7 +40,7 @@ router.get('/export', authMiddleware, roleMiddleware('admin'), async (req, res) 
     `);
     const csvHeader = 'ID,Action,Resource,Details,IP,Username,Timestamp\n';
     const csvRows = result.rows.map(r =>
-      `${r.id},"${r.action}","${r.resource}","${JSON.stringify(r.details || {}).replace(/"/g, '""')}","${r.ip_address || ''}","${r.username || ''}","${r.timestamp}"`
+      `${r.id},"${sanitizeCsv(r.action)}","${sanitizeCsv(r.resource)}","${sanitizeCsv(JSON.stringify(r.details || {}))}","${sanitizeCsv(r.ip_address)}","${sanitizeCsv(r.username)}","${sanitizeCsv(r.timestamp)}"`
     ).join('\n');
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=audit_log.csv');

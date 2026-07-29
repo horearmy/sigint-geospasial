@@ -6,6 +6,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -30,6 +32,9 @@ const imageryRoutes = require('./routes/imagery');
 const predictiveRoutes = require('./routes/predictive');
 const intelligenceRoutes = require('./routes/intelligence');
 const drawingRoutes = require('./routes/drawings');
+const securityRoutes = require('./routes/security');
+const reportRoutes = require('./routes/reports');
+const unitRoutes = require('./routes/units');
 
 const app = express();
 const server = http.createServer(app);
@@ -60,7 +65,7 @@ io.use((socket, next) => {
     return next(new Error('Autentikasi gagal'));
   }
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
     socket.user = decoded;
     next();
   } catch (err) {
@@ -103,14 +108,15 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 app.use('/uploads', (req, res, next) => {
   if (req.path.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
     return next();
   }
-  const token = req.headers.authorization?.replace('Bearer ', '');
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.access_token;
   if (!token) return res.status(401).json({ success: false, error: 'Akses ditolak' });
   try {
-    jwt.verify(token, JWT_SECRET);
+    jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
     next();
   } catch {
     res.status(401).json({ success: false, error: 'Token tidak valid' });
@@ -123,14 +129,12 @@ const authLimiter = rateLimit({
   message: { success: false, error: 'Terlalu banyak percobaan login, coba lagi dalam 15 menit' },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    return req.ip + ':' + (req.path || '');
-  },
+  validate: { xForwardedForHeader: false },
 });
 
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
-  max: 500,
+  max: 2000,
   message: { success: false, error: 'Terlalu banyak request, coba lagi nanti' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -151,6 +155,10 @@ app.use('/api/auth/create-admin', rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 }));
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.use('/api', apiLimiter);
 
 app.use('/api/auth', authRoutes);
@@ -169,10 +177,9 @@ app.use('/api/imagery', imageryRoutes);
 app.use('/api/predictive', predictiveRoutes);
 app.use('/api/intelligence', intelligenceRoutes);
 app.use('/api/drawings', drawingRoutes);
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+app.use('/api/security', securityRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/units', unitRoutes);
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id, 'user:', socket.user?.username);
@@ -185,7 +192,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('leave-room', (room) => {
-    socket.leave(room);
+    const validRooms = ['general', 'alerts', 'tracking'];
+    if (typeof room === 'string' && validRooms.includes(room)) {
+      socket.leave(room);
+    }
   });
 
   socket.on('tracking:publish', (data) => {
@@ -223,7 +233,7 @@ io.emitNotification = (userId, notification) => {
 };
 
 app.use((err, req, res, next) => {
-  if (err instanceof require('multer').MulterError) {
+  if (err instanceof multer.MulterError) {
     return res.status(400).json({ success: false, error: `Upload error: ${err.message}` });
   }
   if (err.message === 'CORS blocked' || err.message === 'Socket.IO CORS blocked') {
@@ -232,7 +242,10 @@ app.use((err, req, res, next) => {
   if (err.message === 'Autentikasi gagal' || err.message === 'Token tidak valid') {
     return res.status(401).json({ success: false, error: err.message });
   }
-  if (err.message) return res.status(400).json({ success: false, error: err.message });
+  if (err.message) {
+    console.error('Request error:', err.message);
+    return res.status(400).json({ success: false, error: 'Request tidak valid' });
+  }
   res.status(500).json({ success: false, error: 'Internal server error' });
 });
 

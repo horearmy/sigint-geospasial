@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import axios from 'axios'
+import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
-import { useToast } from '../App'
+import { useToast } from '../contexts/ToastContext'
 
 export default function AuditLog({ onClose }) {
   const { user } = useAuth()
@@ -17,7 +17,7 @@ export default function AuditLog({ onClose }) {
   const fetchLogs = async () => {
     setLoading(true)
     try {
-      const res = await axios.get(`/api/audit?page=${page}&limit=30`)
+      const res = await api.get(`/api/audit?page=${page}&limit=30`)
       setLogs(res.data.data)
       setTotal(res.data.total)
     } catch (err) { addToast('Gagal mengambil audit log', 'error') }
@@ -26,7 +26,7 @@ export default function AuditLog({ onClose }) {
 
   const handleExport = async () => {
     try {
-      const res = await axios.get('/api/audit/export', { responseType: 'blob' })
+      const res = await api.get('/api/audit/export', { responseType: 'blob' })
       const url = window.URL.createObjectURL(new Blob([res.data]))
       const a = document.createElement('a'); a.href = url; a.download = 'audit_log.csv'; a.click()
       addToast('Audit log berhasil diexport', 'success')

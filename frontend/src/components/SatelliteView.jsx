@@ -3,8 +3,15 @@ import { motion } from 'framer-motion'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import axios from 'axios'
-import { useToast } from '../App'
+
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+})
+import api from '../utils/api'
+import { useToast } from '../contexts/ToastContext'
 
 const IMAGERY_LAYERS = [
   { id: 'standard', name: 'Peta Standar', url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OSM' },
@@ -38,7 +45,7 @@ export default function SatelliteView({ laporan, onClose }) {
 
   useEffect(() => {
     if (center[0] && center[1]) {
-      axios.get(`/api/imagery/imagery?lat=${center[0]}&lng=${center[1]}`)
+      api.get(`/api/imagery/imagery?lat=${center[0]}&lng=${center[1]}`)
         .then(r => setImageryInfo(r.data.data))
         .catch(() => {})
     }

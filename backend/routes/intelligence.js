@@ -38,6 +38,16 @@ const KEYWORDS = {
     'TPNPB', 'KKB', 'kelompok kriminal bersenjata', 'angkatan bersenjata',
     'konflik Papua', 'Aceh merdeka', 'GAM', 'separatisme daerah',
     'radikal daerah', 'pemberontak', 'insurgency', 'gerakan separatis',
+    'Papua', 'otonomi khusus', 'otsus', 'DOB Papua', 'daerah otonomi baru',
+    'HAM Papua', 'kekerasan Papua', 'penembakan Papua', 'akibat konflik',
+    'perjuangan rakyat', 'kemerdekaan', 'separat', 'integrasi Papua',
+    'pemekaran', 'provinsi baru', 'kewenangan', 'hak otonomi',
+    'keistimewaan', 'daerah istimewa', 'khusus Papua',
+    'OTK', 'orang tak dikenal', 'Satgas Damai Cartenz', 'Damai Cartenz',
+    'Yahukimo', 'Intan Jaya', 'Puncak Jaya', 'Nduga', 'Pegunungan Bintang',
+    'operasi militer', 'operasi terukur', 'kontak senjata', 'penembakan',
+    'korban jiwa', 'gugur', 'tewas diserang', 'serangan', 'marksman',
+    'senjata api', 'laras panjang', 'amunisi', 'bom rakitan',
   ],
   terorisme: [
     'teroris', 'terorisme', 'bom', 'ledakan', 'serangan teroris', 'jihad',
@@ -170,7 +180,7 @@ function categorizeText(text) {
   for (const [cat, kwList] of Object.entries(KEYWORDS)) {
     let matches = 0;
     for (const kw of kwList) {
-      if (lower.includes(kw)) matches++;
+      if (lower.includes(kw.toLowerCase())) matches++;
     }
     const score = matches / Math.sqrt(textLen);
     if (score > bestScore) { bestScore = score; bestCategory = cat; }
@@ -209,6 +219,51 @@ async function fetchBMKG() {
 
 let crawlStatus = { running: false, lastCrawl: null, totalItems: 0 };
 
+const LOCATION_PATTERNS = [
+  /(?:di|Wilayah|Kabupaten|Kota|Provinsi|Kab\.|Kota)\s+([A-Za-z]+(?:\s+[A-Za-z]+){0,3})/g,
+  /(?:Kab\.|Kabupaten)\s+([A-Za-z]+(?:\s+[A-Za-z]+){0,2})/,
+  /(?:Kota)\s+([A-Za-z]+(?:\s+[A-Za-z]+){0,2})/,
+  /([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s*,\s*(?:Jawa|Sumatera|Kalimantan|Sulawesi|Bali|NTT|NTB|Papua|Maluku|Gorontalo|Bengkulu|Riau|Jambi|Palembang|Lampung|Banten)/,
+  /REPUBLIKA\.CO\.ID,\s*([A-Z][A-Za-z\s]{2,20})\s*[-–—]/,
+  /(?:CNN|TEMPO|CNBC|LIPUTAN6|ANTARA)[\s.]+([A-Z][A-Za-z\s]{2,20})\s*[-–—]/,
+  /\b(Jakarta|Bandung|Surabaya|Medan|Semarang|Yogyakarta|Makassar|Palembang|Manado|Banjarmasin|Pontianak|Batam|Lampung|Banten|Jabar|Jatim|Jateng|Jogja|Aceh|Papua|NTT|NTB|Bali|Sulsel|Sulut|Kaltim|Kalteng|Kalsel|Riau|Jambi|Sumut|Sumbar|Sumsel|Bengkulu|Maluku|Gorontalo|Sultra|Sulbar|Malut|Papbar|Papua Barat|Bogor|Bekasi|Tangerang|Depok|Karawang|Purwakarta|Subang|Indramayu|Cirebon|Tasikmalaya|Garut|Ciamis|Kuningan|Cimahi|Sukabumi|Cianjur|Pandeglang|Lebak|Serang|Cilegon|Tangerang Selatan)\b/,
+];
+
+function extractLocation(text) {
+  if (!text) return null;
+  const EXCLUDE = new Set(['Asia', 'Eropa', 'Amerika', 'China', 'Israel', 'Gaza', 'Ukraina', 'Rusia', 'Timur', 'Barat', 'Utara', 'Selatan', 'Tengah', 'Dukuh', 'ini', 'yang', 'untuk', 'dari', 'dengan', 'oleh', 'akan', 'belum', 'sudah', 'dalam']);
+  for (const pattern of LOCATION_PATTERNS) {
+    pattern.lastIndex = 0;
+    const match = text.match(pattern);
+    if (match) {
+      const loc = (match[1] || match[0]).replace(/^(di|Wilayah|Kabupaten|Kota|Provinsi|Kab\.|Kota)\s+/i, '').trim();
+      if (loc.length >= 3 && loc.length <= 40 && !EXCLUDE.has(loc) && !/^\d+\s/.test(loc)) return loc;
+    }
+  }
+  return null;
+}
+
+async function geocodeLocation(name) {
+  return new Promise((resolve) => {
+    const query = encodeURIComponent(name + ', Indonesia');
+    const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1&countrycodes=id`;
+    const req = https.get(url, { headers: { 'User-Agent': 'SIGINT-KOSTRAD/1.0' }, timeout: 8000 }, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed?.length > 0) {
+            resolve({ lat: parseFloat(parsed[0].lat), lng: parseFloat(parsed[0].lon), display: parsed[0].display_name.split(',').slice(0, 3).join(',') });
+          } else { resolve(null); }
+        } catch { resolve(null); }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+  });
+}
+
 async function crawlAndCategorize() {
   if (crawlStatus.running) return;
   crawlStatus.running = true;
@@ -224,6 +279,7 @@ async function crawlAndCategorize() {
       const feedItems = (parsed.items || []).slice(0, 20).map(item => {
         const text = `${item.title || ''} ${item.contentSnippet || item.content || ''}`;
         const kategori = categorizeText(text);
+        const lokasi_nama = extractLocation(item.title || '') || extractLocation(item.contentSnippet || item.content || '');
         return {
           kategori,
           subkategori: null,
@@ -232,6 +288,7 @@ async function crawlAndCategorize() {
           sumber: feed.name,
           sumber_url: item.link || '',
           ancaman_level: 1,
+          lokasi_nama: lokasi_nama || null,
         };
       });
       items.push(...feedItems);
@@ -257,8 +314,8 @@ async function crawlAndCategorize() {
           );
         } else {
           await client.query(
-            'INSERT INTO intelligence (kategori, subkategori, judul, deskripsi, sumber, sumber_url, ancaman_level) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-            [item.kategori, item.subkategori, item.judul, item.deskripsi, item.sumber, item.sumber_url, item.ancaman_level]
+            'INSERT INTO intelligence (kategori, subkategori, judul, deskripsi, sumber, sumber_url, ancaman_level, lokasi_nama) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+            [item.kategori, item.subkategori, item.judul, item.deskripsi, item.sumber, item.sumber_url, item.ancaman_level, item.lokasi_nama]
           );
         }
         inserted++;
@@ -305,7 +362,7 @@ router.get('/list', authMiddleware, async (req, res) => {
   }
 });
 
-router.post('/add', authMiddleware, async (req, res) => {
+router.post('/add', authMiddleware, roleMiddleware('admin', 'analis'), async (req, res) => {
   try {
     const { kategori, subkategori, judul, deskripsi, sumber, sumber_url, ancaman_level, lokasi_nama, latitude, longitude, tags } = req.body;
     if (!kategori || !judul) {
@@ -368,7 +425,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
   }
 });
 
-router.post('/crawl', authMiddleware, async (req, res) => {
+router.post('/crawl', authMiddleware, roleMiddleware('admin', 'analis'), async (req, res) => {
   if (crawlStatus.running) return res.json({ success: true, message: 'Crawl sudah berjalan' });
   crawlAndCategorize();
   res.json({ success: true, message: 'Crawl dimulai' });
@@ -376,6 +433,32 @@ router.post('/crawl', authMiddleware, async (req, res) => {
 
 router.get('/crawl-status', authMiddleware, (req, res) => {
   res.json({ success: true, data: crawlStatus });
+});
+
+const ALLOWED_FETCH_HOSTS = ['antaranews.com', 'tempo.co', 'cnbcindonesia.com', 'cnnindonesia.com', 'liputan6.com', 'republika.co.id', 'bmkg.go.id'];
+
+router.get('/fetch-image', authMiddleware, async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ success: false, message: 'URL required' });
+  try {
+    const parsedUrl = new (require('url').URL)(url);
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return res.status(400).json({ success: false, message: 'Protocol tidak diizinkan' });
+    }
+    if (!ALLOWED_FETCH_HOSTS.some(h => parsedUrl.hostname.endsWith(h))) {
+      return res.status(400).json({ success: false, message: 'Domain tidak diizinkan' });
+    }
+    const html = await fetchUrl(url);
+    if (!html) return res.json({ success: true, data: { imageUrl: null } });
+    const ogMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+      || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    const twitterMatch = !ogMatch && html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
+      || !ogMatch && html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i);
+    const imageUrl = ogMatch?.[1] || twitterMatch?.[1] || null;
+    return res.json({ success: true, data: { imageUrl } });
+  } catch (err) {
+    return res.json({ success: true, data: { imageUrl: null } });
+  }
 });
 
 const cron = require('node-cron');

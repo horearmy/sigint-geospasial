@@ -56,7 +56,20 @@ function formatNum(val, precision) {
   return val.toFixed(precision)
 }
 
-export function getMGRSGridLines(bounds, zoom) {
+function dmsLabel(val, isLat) {
+  const abs = Math.abs(val)
+  const d = Math.floor(abs)
+  const m = Math.floor((abs - d) * 60)
+  const s = ((abs - d - m / 60) * 3600).toFixed(1)
+  const dir = isLat ? (val >= 0 ? 'N' : 'S') : (val >= 0 ? 'E' : 'W')
+  return `${d}°${m}'${s}"${dir}`
+}
+
+function ddLabel(val, isLat) {
+  return val.toFixed(4) + (isLat ? '°N' : '°E')
+}
+
+export function getMGRSGridLines(bounds, zoom, format = 'mgrs') {
   const lines = []
   const numLabels = []
   const edgeLabels = []
@@ -76,6 +89,11 @@ export function getMGRSGridLines(bounds, zoom) {
   const majorStep = step * (zoom <= 6 ? 6 : zoom <= 9 ? 4 : zoom <= 12 ? 2 : 1)
   const zone = getUTMZone((west + east) / 2)
 
+  const isMGRS = format === 'mgrs'
+  const isUTMFmt = format === 'utm'
+  const isDMS = format === 'dms'
+  const isDD = format === 'dd'
+
   for (let lng = startLng; lng <= endLng; lng += step) {
     if (lng < west - 0.001 || lng > east + 0.001) continue
 
@@ -84,36 +102,32 @@ export function getMGRSGridLines(bounds, zoom) {
 
     lines.push({ type: 'vertical', lng, south, north, isMajor: isMajor || isUTM, isUTM })
 
-    const easting = toEasting(lng, zone)
-
     if (showNum && (isMajor || isUTM)) {
-      const numText = formatNum(easting, precision) + 'E'
+      let numText
+      if (isMGRS) {
+        numText = formatNum(toEasting(lng, zone), precision) + 'E'
+      } else if (isUTMFmt) {
+        numText = `${zone} ${formatNum(toEasting(lng, zone), precision)}E`
+      } else if (isDMS) {
+        numText = dmsLabel(lng, false)
+      } else {
+        numText = ddLabel(lng, false)
+      }
 
-      numLabels.push({
-        text: numText,
-        lat: north,
-        lng,
-        anchor: 'top',
-        type: 'easting',
-      })
-
-      numLabels.push({
-        text: numText,
-        lat: south,
-        lng,
-        anchor: 'bottom',
-        type: 'easting',
-      })
+      numLabels.push({ text: numText, lat: north, lng, anchor: 'top', type: 'easting' })
+      numLabels.push({ text: numText, lat: south, lng, anchor: 'bottom', type: 'easting' })
     }
 
-    if (isUTM) {
-      const band = getMGRSBand((south + north) / 2)
-      edgeLabels.push({ text: `${zone}${band}`, lat: north, lng, anchor: 'top', type: 'zone' })
-      edgeLabels.push({ text: `${zone}${band}`, lat: south, lng, anchor: 'bottom', type: 'zone' })
-    } else if (isMajor) {
-      const band = getMGRSBand((south + north) / 2)
-      edgeLabels.push({ text: `${zone}${band}`, lat: north, lng, anchor: 'top', type: 'zone-minor' })
-      edgeLabels.push({ text: `${zone}${band}`, lat: south, lng, anchor: 'bottom', type: 'zone-minor' })
+    if (isMGRS || isUTMFmt) {
+      if (isUTM) {
+        const band = getMGRSBand((south + north) / 2)
+        edgeLabels.push({ text: `${zone}${band}`, lat: north, lng, anchor: 'top', type: 'zone' })
+        edgeLabels.push({ text: `${zone}${band}`, lat: south, lng, anchor: 'bottom', type: 'zone' })
+      } else if (isMajor) {
+        const band = getMGRSBand((south + north) / 2)
+        edgeLabels.push({ text: `${zone}${band}`, lat: north, lng, anchor: 'top', type: 'zone-minor' })
+        edgeLabels.push({ text: `${zone}${band}`, lat: south, lng, anchor: 'bottom', type: 'zone-minor' })
+      }
     }
   }
 
@@ -126,31 +140,28 @@ export function getMGRSGridLines(bounds, zoom) {
     lines.push({ type: 'horizontal', lat, west, east, isMajor })
 
     if (showNum && isMajor) {
-      const northing = toNorthing(lat, zone)
-      const numText = formatNum(northing, precision) + 'N'
+      let numText
+      if (isMGRS) {
+        numText = formatNum(toNorthing(lat, zone), precision) + 'N'
+      } else if (isUTMFmt) {
+        numText = `${zone} ${formatNum(toNorthing(lat, zone), precision)}N`
+      } else if (isDMS) {
+        numText = dmsLabel(lat, true)
+      } else {
+        numText = ddLabel(lat, true)
+      }
 
-      numLabels.push({
-        text: numText,
-        lat,
-        lng: west,
-        anchor: 'left',
-        type: 'northing',
-      })
-
-      numLabels.push({
-        text: numText,
-        lat,
-        lng: east,
-        anchor: 'right',
-        type: 'northing',
-      })
+      numLabels.push({ text: numText, lat, lng: west, anchor: 'left', type: 'northing' })
+      numLabels.push({ text: numText, lat, lng: east, anchor: 'right', type: 'northing' })
     }
 
-    if (isMajor) {
-      const band = getMGRSBand(lat)
-      if (band) {
-        edgeLabels.push({ text: `${band}°`, lat, lng: west, anchor: 'left', type: 'band' })
-        edgeLabels.push({ text: `${band}°`, lat, lng: east, anchor: 'right', type: 'band' })
+    if (isMGRS || isUTMFmt) {
+      if (isMajor) {
+        const band = getMGRSBand(lat)
+        if (band) {
+          edgeLabels.push({ text: `${band}°`, lat, lng: west, anchor: 'left', type: 'band' })
+          edgeLabels.push({ text: `${band}°`, lat, lng: east, anchor: 'right', type: 'band' })
+        }
       }
     }
   }

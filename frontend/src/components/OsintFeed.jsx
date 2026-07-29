@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import axios from 'axios'
-import { useToast } from '../App'
+import api from '../utils/api'
+import { useToast } from '../contexts/ToastContext'
 
 const KATEGORI = [
   { key: 'gangguan_keamanan', label: 'Gangguan Keamanan', icon: '🚨', color: '#ef4444' },
@@ -29,7 +29,7 @@ const SUBKATEGORI = {
 
 const LEVEL_LABEL = { 1: { text: 'Rendah', color: '#16a34a' }, 2: { text: 'Sedang', color: '#ca8a04' }, 3: { text: 'Tinggi', color: '#ea580c' }, 4: { text: 'Kritis', color: '#dc2626' } };
 
-export default function OsintFeed({ onClose }) {
+export default function OsintFeed({ onClose, onCreateLaporan }) {
   const addToast = useToast()
   const [items, setItems] = useState([])
   const [stats, setStats] = useState(null)
@@ -50,7 +50,7 @@ export default function OsintFeed({ onClose }) {
       const params = { page, limit: 30 }
       if (activeKategori) params.kategori = activeKategori
       if (search) params.search = search
-      const res = await axios.get('/api/intelligence/list', { params })
+      const res = await api.get('/api/intelligence/list', { params })
       setItems(res.data.data.items)
       setTotalPages(res.data.data.pages)
     } catch (err) { console.error(err) }
@@ -58,7 +58,7 @@ export default function OsintFeed({ onClose }) {
   }
 
   const fetchStats = async () => {
-    try { const res = await axios.get('/api/intelligence/stats'); setStats(res.data.data) } catch (err) { console.error(err) }
+    try { const res = await api.get('/api/intelligence/stats'); setStats(res.data.data) } catch (err) { console.error(err) }
   }
 
   const handleSearch = () => { setPage(1); fetchItems() }
@@ -66,7 +66,7 @@ export default function OsintFeed({ onClose }) {
   const handleCrawl = async () => {
     setCrawling(true)
     try {
-      await axios.post('/api/intelligence/crawl')
+      await api.post('/api/intelligence/crawl')
       addToast('Crawl dimulai, tunggu beberapa saat', 'info')
       setTimeout(() => { fetchItems(); fetchStats(); }, 15000)
     } catch (err) { addToast('Gagal crawl', 'error') }
@@ -75,7 +75,7 @@ export default function OsintFeed({ onClose }) {
 
   const handleAdd = async (form) => {
     try {
-      await axios.post('/api/intelligence/add', form)
+      await api.post('/api/intelligence/add', form)
       addToast('Data intelijen berhasil ditambahkan', 'success')
       setShowAdd(false)
       fetchItems(); fetchStats()
@@ -84,7 +84,7 @@ export default function OsintFeed({ onClose }) {
 
   const handleUpdateStatus = async (id, status) => {
     try {
-      await axios.put(`/api/intelligence/update/${id}`, { status })
+      await api.put(`/api/intelligence/update/${id}`, { status })
       setItems(prev => prev.map(i => i.id === id ? { ...i, status } : i))
       addToast('Status diperbarui', 'success')
     } catch (err) { addToast('Gagal update', 'error') }
@@ -174,7 +174,7 @@ export default function OsintFeed({ onClose }) {
                       {item.status === 'baru' ? '🟢 Baru' : item.status === 'diproses' ? '🟡 Diproses' : '⚪ Selesai'}
                     </span>
                   </div>
-                  <strong className="intel-item-title" onClick={() => item.sumber_url && window.open(item.sumber_url, '_blank')}>
+                  <strong className="intel-item-title" onClick={() => { if (item.sumber_url && item.sumber_url.startsWith('https://')) window.open(item.sumber_url, '_blank', 'noopener,noreferrer') }}>
                     {item.judul}
                   </strong>
                   {item.deskripsi && <p className="intel-item-desc">{item.deskripsi}</p>}
@@ -188,8 +188,9 @@ export default function OsintFeed({ onClose }) {
                         <button className="btn btn-ghost btn-xs" onClick={() => handleUpdateStatus(item.id, 'selesai')}>✓ Selesai</button>
                       )}
                       {item.sumber_url && (
-                        <button className="btn btn-ghost btn-xs" onClick={() => window.open(item.sumber_url, '_blank')}>🔗 Buka</button>
+                        <button className="btn btn-ghost btn-xs" onClick={() => { if (item.sumber_url && item.sumber_url.startsWith('https://')) window.open(item.sumber_url, '_blank', 'noopener,noreferrer') }}>🔗 Buka</button>
                       )}
+                      <button className="btn btn-primary btn-xs" onClick={() => onCreateLaporan && onCreateLaporan(item)}>📝 Buat Laporan</button>
                     </div>
                   </div>
                 </motion.div>

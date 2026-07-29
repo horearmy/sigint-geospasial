@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 
-const KATEGORI_LIST = ['Banjir', 'Gempa Bumi', 'Kebakaran', 'Longsor', 'Angin Kencang', 'Kekeringan', 'Bencana Lainnya', 'Berita Umum']
+const KATEGORI_LIST = ['Gangguan Keamanan', 'Separatisme', 'Terorisme', 'Radikalisme', 'Keamanan Nasional', 'Politik', 'Sosial', 'Ekonomi', 'Informasi Lain']
 
 export default function AdvancedSearch({ onSearch, onClose }) {
   const [filters, setFilters] = useState({

@@ -22,7 +22,7 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-router.post('/', authMiddleware, roleMiddleware('admin', 'analis', 'operator'), async (req, res) => {
+router.post('/', authMiddleware, roleMiddleware('admin', 'analis', 'operator', 'lapangan'), async (req, res) => {
   try {
     const { name, description, shape_type, coordinates, color, stroke_width, fill_opacity } = req.body;
     if (!shape_type || !coordinates) {
@@ -43,10 +43,19 @@ router.post('/', authMiddleware, roleMiddleware('admin', 'analis', 'operator'), 
   }
 });
 
-router.put('/:id', authMiddleware, roleMiddleware('admin', 'analis', 'operator'), async (req, res) => {
+router.put('/:id', authMiddleware, roleMiddleware('admin', 'analis', 'operator', 'lapangan'), async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, color, stroke_width, fill_opacity, coordinates } = req.body;
+
+    const existing = await pool.query('SELECT id, user_id FROM drawings WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Gambar tidak ditemukan' });
+    }
+    if (existing.rows[0].user_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Tidak memiliki akses' });
+    }
+
     const fields = [];
     const values = [];
     let idx = 1;

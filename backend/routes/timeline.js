@@ -4,9 +4,9 @@ const pool = require('../db/pool');
 const { authMiddleware } = require('../middleware/auth');
 
 const ALLOWED_PERIODS = {
-  week: "7 days",
-  month: "30 days",
-  year: "1 year",
+  week: "7",
+  month: "30",
+  year: "365",
   all: null,
 };
 
@@ -22,7 +22,7 @@ router.get('/', authMiddleware, async (req, res) => {
       params.push(ALLOWED_PERIODS[period]);
       whereClause = `WHERE created_at >= NOW() - ($1 || ' days')::INTERVAL`;
     } else {
-      params.push("7 days");
+      params.push("7");
       whereClause = `WHERE created_at >= NOW() - ($1 || ' days')::INTERVAL`;
     }
 

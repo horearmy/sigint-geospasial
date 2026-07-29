@@ -7,15 +7,25 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
-function authMiddleware(req, res, next) {
+function extractToken(req) {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1];
+  }
+  if (req.cookies?.access_token) {
+    return req.cookies.access_token;
+  }
+  return null;
+}
+
+function authMiddleware(req, res, next) {
+  const token = extractToken(req);
+  if (!token) {
     return res.status(401).json({ success: false, error: 'Token tidak ditemukan' });
   }
 
-  const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
     req.user = decoded;
     next();
   } catch (err) {
@@ -24,11 +34,10 @@ function authMiddleware(req, res, next) {
 }
 
 function optionalAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1];
+  const token = extractToken(req);
+  if (token) {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
       req.user = decoded;
     } catch (err) {}
   }

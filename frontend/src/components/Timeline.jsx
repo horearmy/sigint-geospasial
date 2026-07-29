@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import axios from 'axios'
+import api from '../utils/api'
 
 const KATEGORI_COLORS = {
   'Gangguan Keamanan': '#ef4444', 'Separatisme': '#7c3aed', 'Terorisme': '#dc2626',
@@ -20,7 +20,7 @@ export default function Timeline({ onClose }) {
   const fetchTimeline = async () => {
     setLoading(true)
     try {
-      const res = await axios.get(`/api/timeline?period=${period}`)
+      const res = await api.get(`/api/timeline?period=${period}`)
       setEvents(res.data.data)
     } catch (err) {
       console.error(err)

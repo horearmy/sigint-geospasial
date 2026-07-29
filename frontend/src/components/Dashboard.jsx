@@ -8,17 +8,18 @@ import {
   LineElement,
   ArcElement,
   BarElement,
+  RadialLinearScale,
   Title,
   Tooltip,
   Legend,
   Filler,
 } from 'chart.js'
-import { Line, Doughnut, Bar } from 'react-chartjs-2'
+import { Line, Doughnut, Radar } from 'react-chartjs-2'
 import { useAnimatedCounter } from '../hooks/useAnimatedCounter'
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement,
-  ArcElement, BarElement, Title, Tooltip, Legend, Filler
+  ArcElement, BarElement, RadialLinearScale, Title, Tooltip, Legend, Filler
 )
 
 const container = {
@@ -82,13 +83,13 @@ export default function Dashboard({ laporan, stats, getKategoriColor, getKategor
         {
           label: 'Laporan per Hari',
           data: Object.values(days),
-          borderColor: '#1b4332',
-          backgroundColor: 'rgba(27, 67, 50, 0.1)',
+          borderColor: '#3DDC84',
+          backgroundColor: 'rgba(61, 220, 132, 0.1)',
           fill: true,
           tension: 0.4,
           pointRadius: 5,
-          pointBackgroundColor: '#1b4332',
-          pointBorderColor: 'white',
+          pointBackgroundColor: '#3DDC84',
+          pointBorderColor: '#07110A',
           pointBorderWidth: 2,
           borderWidth: 2.5,
           pointHoverRadius: 8,
@@ -112,7 +113,7 @@ export default function Dashboard({ laporan, stats, getKategoriColor, getKategor
           data: sortedKategori.map(([, v]) => v),
           backgroundColor: sortedKategori.map(([k]) => getKategoriColor(k)),
           borderWidth: 3,
-          borderColor: getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#ffffff',
+          borderColor: '#102114',
           hoverOffset: 10,
         },
       ],
@@ -124,30 +125,43 @@ export default function Dashboard({ laporan, stats, getKategoriColor, getKategor
       hours[h]++
     })
 
-    const barData = {
-      labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+    const kategoriWeights = {}
+    const nowMs = Date.now()
+    const DAY = 86400000
+    laporan.forEach((l) => {
+      const age = (nowMs - new Date(l.created_at).getTime()) / DAY
+      const recencyWeight = age <= 1 ? 4 : age <= 3 ? 3 : age <= 7 ? 2 : 1
+      kategoriWeights[l.kategori] = (kategoriWeights[l.kategori] || 0) + recencyWeight
+    })
+
+    const maxWeight = Math.max(...Object.values(kategoriWeights), 1)
+    const riskEntries = Object.entries(kategoriWeights)
+      .map(([k, v]) => [k, Math.round((v / maxWeight) * 100)])
+      .sort((a, b) => b[1] - a[1])
+
+    const riskScoreData = {
+      labels: riskEntries.map(([k]) => k),
       datasets: [
         {
-          label: 'Laporan per Jam',
-          data: hours,
-          backgroundColor: (ctx) => {
-            const chart = ctx.chart
-            const { ctx: c, chartArea } = chart
-            if (!chartArea) return 'rgba(201, 168, 76, 0.7)'
-            const gradient = c.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-            gradient.addColorStop(0, 'rgba(201, 168, 76, 0.3)')
-            gradient.addColorStop(1, 'rgba(201, 168, 76, 0.8)')
-            return gradient
-          },
-          borderColor: '#c9a84c',
-          borderWidth: 1,
-          borderRadius: 6,
-          barThickness: 10,
+          label: 'Risk Score',
+          data: riskEntries.map(([, v]) => v),
+          backgroundColor: 'rgba(61, 220, 132, 0.15)',
+          borderColor: '#3DDC84',
+          borderWidth: 2,
+          pointBackgroundColor: riskEntries.map(([k]) => getKategoriColor(k)),
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          fill: true,
         },
       ],
     }
 
-    return { lineData, doughnutData, barData, kategoriCount, sortedKategori }
+    const totalRisk = riskEntries.reduce((sum, [, v]) => sum + v, 0)
+    const avgRisk = riskEntries.length > 0 ? Math.round(totalRisk / riskEntries.length) : 0
+
+    return { lineData, doughnutData, riskScoreData, kategoriCount, sortedKategori, avgRisk, riskEntries }
   }, [laporan, getKategoriColor])
 
   const recentActivity = useMemo(() => {
@@ -210,10 +224,10 @@ export default function Dashboard({ laporan, stats, getKategoriColor, getKategor
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+                    plugins: {                       legend: { display: false, labels: { color: '#94A3B8' } }, tooltip: { mode: 'index', intersect: false } },
                     scales: {
-                      y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.04)' } },
-                      x: { grid: { display: false } },
+                      y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94A3B8' }, grid: { color: 'rgba(61, 220, 132, 0.08)' }, border: { color: 'rgba(45, 91, 58, 0.3)' } },
+                      x: { grid: { display: false }, ticks: { color: '#94A3B8' } },
                     },
                     interaction: { mode: 'nearest', axis: 'x', intersect: false },
                     animation: { duration: 1000, easing: 'easeOutQuart' },
@@ -231,7 +245,7 @@ export default function Dashboard({ laporan, stats, getKategoriColor, getKategor
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                      legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true, pointStyleWidth: 8 } },
+                      legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true, pointStyleWidth: 8, color: '#94A3B8' } },
                     },
                     cutout: '60%',
                     animation: { animateRotate: true, duration: 1200 },
@@ -243,22 +257,41 @@ export default function Dashboard({ laporan, stats, getKategoriColor, getKategor
 
           <div className="chart-grid">
             <motion.div className="chart-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, type: 'spring' }}>
-              <h3>🕐 Aktivitas per Jam</h3>
+              <h3>🎯 Risk Score <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-light)' }}>({chartData.avgRisk} avg)</span></h3>
               <div className="chart-wrapper">
-                <Bar
-                  data={chartData.barData}
+                <Radar
+                  data={chartData.riskScoreData}
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                      y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.04)' } },
-                      x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+                      r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { stepSize: 25, display: false },
+                        grid: { color: 'rgba(61, 220, 132, 0.1)' },
+                        angleLines: { color: 'rgba(61, 220, 132, 0.1)' },
+                        pointLabels: { font: { size: 11, weight: '600' }, color: 'var(--text)' },
+                      },
                     },
                     animation: { duration: 800, easing: 'easeOutQuart' },
                   }}
                 />
               </div>
+              {chartData.riskEntries.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '8px 0 0', justifyContent: 'center' }}>
+                  {chartData.riskEntries.slice(0, 6).map(([k, v]) => (
+                    <span key={k} style={{
+                      fontSize: '0.68rem', padding: '2px 8px', borderRadius: '12px',
+                      background: getKategoriColor(k) + '18', color: getKategoriColor(k),
+                      fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px'
+                    }}>
+                      {getKategoriIcon(k)} {v}
+                    </span>
+                  ))}
+                </div>
+              )}
             </motion.div>
 
             <motion.div className="chart-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, type: 'spring' }}>
@@ -268,6 +301,7 @@ export default function Dashboard({ laporan, stats, getKategoriColor, getKategor
                   <motion.div
                     key={a.id}
                     className="activity-item"
+                    style={{ background: getKategoriColor(a.kategori) + '18', borderLeft: `3px solid ${getKategoriColor(a.kategori)}` }}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.1 * i, type: 'spring', stiffness: 200 }}>

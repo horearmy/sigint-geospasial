@@ -4,7 +4,7 @@ import L from 'leaflet'
 import { getMGRSGridLines } from '../utils/mgrs-grid'
 
 const MGRSGridLayer = L.Layer.extend({
-  options: { maxZoom: 18, minZoom: 3 },
+  options: { maxZoom: 18, minZoom: 3, format: 'mgrs' },
 
   onAdd(map) {
     this._map = map
@@ -66,7 +66,8 @@ const MGRSGridLayer = L.Layer.extend({
     const H = this._canvas.height
     ctx.clearRect(0, 0, W, H)
 
-    const { lines, numLabels, edgeLabels } = getMGRSGridLines(bounds, zoom)
+    const format = this.options.format || 'mgrs'
+    const { lines, numLabels, edgeLabels } = getMGRSGridLines(bounds, zoom, format)
 
     const pTL = map.latLngToContainerPoint([bounds.getNorth(), bounds.getWest()])
     const pBR = map.latLngToContainerPoint([bounds.getSouth(), bounds.getEast()])
@@ -217,16 +218,23 @@ const MGRSGridLayer = L.Layer.extend({
   },
 })
 
-export default function MapGrid({ enabled }) {
+export default function MapGrid({ enabled, format }) {
   const map = useMap()
   const layerRef = useRef(null)
 
   useEffect(() => {
     if (!map) return
-    if (enabled && !layerRef.current) { layerRef.current = new MGRSGridLayer().addTo(map) }
+    if (enabled && !layerRef.current) { layerRef.current = new MGRSGridLayer({ format: format || 'mgrs' }).addTo(map) }
     if (!enabled && layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null }
     return () => { if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null } }
   }, [map, enabled])
+
+  useEffect(() => {
+    if (layerRef.current) {
+      layerRef.current.options.format = format || 'mgrs'
+      layerRef.current._update()
+    }
+  }, [format])
 
   return null
 }

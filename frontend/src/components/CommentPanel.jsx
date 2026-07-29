@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import axios from 'axios'
+import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
-import { useToast } from '../App'
+import { useToast } from '../contexts/ToastContext'
 
 export default function CommentPanel({ laporanId, onClose }) {
   const { user } = useAuth()
@@ -19,7 +19,7 @@ export default function CommentPanel({ laporanId, onClose }) {
 
   const fetchComments = async () => {
     try {
-      const res = await axios.get(`/api/comments/laporan/${laporanId}`)
+      const res = await api.get(`/api/comments/laporan/${laporanId}`)
       setComments(res.data.data)
     } catch (err) {
       console.error(err)
@@ -33,7 +33,7 @@ export default function CommentPanel({ laporanId, onClose }) {
     if (!newComment.trim()) return
     setSending(true)
     try {
-      const res = await axios.post('/api/comments', {
+      const res = await api.post('/api/comments', {
         laporan_id: laporanId,
         content: newComment,
         parent_id: replyTo?.id || null,
@@ -51,7 +51,7 @@ export default function CommentPanel({ laporanId, onClose }) {
   const handleDelete = async (id) => {
     if (!confirm('Hapus komentar ini?')) return
     try {
-      await axios.delete(`/api/comments/${id}`)
+      await api.delete(`/api/comments/${id}`)
       setComments(prev => prev.filter(c => c.id !== id))
       addToast('Komentar dihapus', 'success')
     } catch (err) {
@@ -60,7 +60,7 @@ export default function CommentPanel({ laporanId, onClose }) {
   }
 
   const getRoleBadge = (role) => {
-    const colors = { admin: '#ef4444', analis: '#8b5cf6', operator: '#1b4332', viewer: '#64748b' }
+    const colors = { admin: '#ef4444', analis: '#8b5cf6', operator: '#1b4332', lapangan: '#0ea5e9', viewer: '#64748b' }
     return (
       <span style={{
         padding: '1px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600,

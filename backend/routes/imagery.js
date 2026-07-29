@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require('../db/pool');
 const { authMiddleware } = require('../middleware/auth');
 
-router.get('/imagery', authMiddleware, async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const { lat, lng, zoom = 8, date } = req.query;
     if (!lat || !lng) {
@@ -17,7 +17,7 @@ router.get('/imagery', authMiddleware, async (req, res) => {
       { id: 'ndwi', name: 'NDWI Water', type: 'index', description: 'Indeks air', maxZoom: 14 },
     ];
 
-    const tileUrl = `https://tiles.maps.eox.at/wmts/1.0.0/`.
+    const tileUrl = `https://tiles.maps.eox.at/wmts/1.0.0/`;
 
     res.json({
       success: true,

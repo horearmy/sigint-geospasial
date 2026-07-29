@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react'
-import axios from 'axios'
+import api from './utils/api'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import ToastContext, { useToast } from './contexts/ToastContext'
 import MapView from './components/MapView'
 import LaporanForm from './components/LaporanForm'
 import LaporanList from './components/LaporanList'
@@ -23,16 +24,22 @@ import LiveTracking from './components/LiveTracking'
 import SatelliteView from './components/SatelliteView'
 import PredictivePanel from './components/PredictivePanel'
 import WorkflowPanel from './components/WorkflowPanel'
+import SatuanPanel from './components/SatuanPanel'
+import Terrain3D from './components/Terrain3D'
 import KeyboardShortcutsHandler from './components/KeyboardShortcuts'
 import MobileNav from './components/MobileNav'
 import { DashboardSkeleton, ListSkeleton } from './components/SkeletonLoader'
 import PwaInstallPrompt from './components/PwaInstallPrompt'
+import SecurityBadge from './components/SecurityBadge'
+import NewsTicker from './components/NewsTicker'
 import ProfilePage from './components/ProfilePage'
 import DrawingPanel from './components/DrawingPanel'
+import LapanganPage from './components/LapanganPage'
+import ReportGenerator from './components/ReportGenerator'
 import { useRealtimeLaporan, useRealtimeNotifications } from './hooks/useSocket'
 
 const API = '/api/laporan'
-const REFRESH_INTERVAL = 30000
+const REFRESH_INTERVAL = 45000
 
 const KATEGORI_COLORS = {
   'Gangguan Keamanan': '#ef4444', 'Separatisme': '#7c3aed', 'Terorisme': '#dc2626',
@@ -46,8 +53,7 @@ const KATEGORI_ICONS = {
   'Sosial': '👥', 'Ekonomi': '💰', 'Informasi Lain': '📢',
 }
 
-export const ToastContext = createContext()
-export function useToast() { return useContext(ToastContext) }
+export { useToast }
 
 function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
@@ -120,6 +126,7 @@ function AppContent() {
   const [laporan, setLaporan] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editingLaporan, setEditingLaporan] = useState(null)
+  const [prefillData, setPrefillData] = useState(null)
   const [selectedLaporan, setSelectedLaporan] = useState(null)
   const [filter, setFilter] = useState({ kategori: '', search: '' })
   const [pickLocation, setPickLocation] = useState(null)
@@ -143,6 +150,7 @@ function AppContent() {
   const [showWorkflow, setShowWorkflow] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const [showReport, setShowReport] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [drawingEnabled, setDrawingEnabled] = useState(false)
@@ -152,6 +160,13 @@ function AppContent() {
   const [showMenu, setShowMenu] = useState(false)
   const [selectedKategori, setSelectedKategori] = useState(null)
   const [flyToTarget, setFlyToTarget] = useState(null)
+  const [zones, setZones] = useState([])
+  const [zoneDrawingMode, setZoneDrawingMode] = useState(false)
+  const [pendingZoneGeoJson, setPendingZoneGeoJson] = useState(null)
+  const [showSatuan, setShowSatuan] = useState(false)
+  const [satuans, setSatuans] = useState([])
+  const [showTerrain3D, setShowTerrain3D] = useState(false)
+  const [satuanPickLocation, setSatuanPickLocation] = useState(null)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -160,32 +175,44 @@ function AppContent() {
 
   const fetchLaporan = useCallback(async (customParams) => {
     try {
-      const params = { ...filter, ...customParams }
+      const params = { limit: 500, ...filter, ...customParams }
       if (!params.kategori) delete params.kategori
       if (!params.search) delete params.search
       if (!params.date_from) delete params.date_from
       if (!params.date_to) delete params.date_to
       if (!params.radius) { delete params.lat; delete params.lng; delete params.radius; }
-      const res = await axios.get(API, { params })
+      const res = await api.get(API, { params })
       setLaporan(res.data.data)
     } catch (err) { console.error(err) } finally { setLoading(false); setInitialLoad(false) }
   }, [filter])
 
   const fetchStats = useCallback(async () => {
-    try { const res = await axios.get(`${API}/stats`); setStats(res.data.data) } catch (err) { console.error(err) }
+    try { const res = await api.get(`${API}/stats`); setStats(res.data.data) } catch (err) { console.error(err) }
   }, [])
 
   const fetchDrawings = useCallback(async () => {
-    try { const res = await axios.get('/api/drawings'); setDrawings(res.data.data) } catch (err) { console.error(err) }
+    try { const res = await api.get('/api/drawings'); setDrawings(res.data.data) } catch (err) { console.error(err) }
+  }, [])
+
+  const fetchZones = useCallback(async () => {
+    try { const res = await api.get('/api/zones'); setZones(res.data.data) } catch (err) { console.error(err) }
+  }, [])
+
+  const fetchSatuans = useCallback(async () => {
+    try { const res = await api.get('/api/units'); setSatuans(res.data.data) } catch (err) { console.error(err) }
   }, [])
 
   const refreshAll = useCallback(() => {
-    fetchLaporan()
-    fetchStats()
-    fetchDrawings()
-  }, [fetchLaporan, fetchStats, fetchDrawings])
+    Promise.allSettled([
+      fetchLaporan(),
+      fetchStats(),
+      fetchDrawings(),
+      fetchZones(),
+      fetchSatuans(),
+    ]).catch(() => {})
+  }, [fetchLaporan, fetchStats, fetchDrawings, fetchZones, fetchSatuans])
 
-  useEffect(() => { if (user) { fetchLaporan(); fetchStats(); fetchDrawings() } }, [fetchLaporan, fetchStats, fetchDrawings, user])
+  useEffect(() => { if (user) { fetchLaporan(); fetchStats(); fetchDrawings(); fetchZones(); fetchSatuans() } }, [fetchLaporan, fetchStats, fetchDrawings, fetchZones, fetchSatuans, user])
 
   const handleNewLaporan = useCallback((data) => {
     setLaporan(prev => [data, ...prev])
@@ -220,26 +247,36 @@ function AppContent() {
   const handleSave = async (formData) => {
     try {
       if (editingLaporan) {
-        await axios.put(`${API}/${editingLaporan.id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+        await api.put(`${API}/${editingLaporan.id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
         addToast('Laporan berhasil diperbarui', 'success')
       } else {
-        await axios.post(API, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+        await api.post(API, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
         addToast('Laporan berhasil dikirim', 'success')
       }
-      setShowForm(false); setEditingLaporan(null); setPickLocation(null); fetchLaporan(); fetchStats()
+      setShowForm(false); setEditingLaporan(null); setPrefillData(null); setPickLocation(null); fetchLaporan(); fetchStats()
     } catch (err) {
       addToast(err?.response?.data?.error || 'Gagal menyimpan laporan', 'error')
       throw err
     }
   }
 
+  const handleCreateFromIntel = (item) => {
+    setPrefillData(item)
+    setEditingLaporan(null)
+    setShowForm(true)
+    setShowOsintFeed(false)
+  }
+
   const handleDelete = async (id) => {
-    try { await axios.delete(`${API}/${id}`); setSelectedLaporan(null); fetchLaporan(); fetchStats(); return true } catch { return false }
+    try { await api.delete(`${API}/${id}`); setSelectedLaporan(null); fetchLaporan(); fetchStats(); return true } catch { return false }
   }
 
   const handleEdit = (l) => { setEditingLaporan(l); setShowForm(true); setSelectedLaporan(null) }
   const handleMapClick = (lat, lng) => {
-    if (showForm) {
+    if (zoneDrawingMode) return
+    if (showSatuan) {
+      setSatuanPickLocation({ lat, lng })
+    } else if (showForm) {
       setPickLocation({ lat, lng })
     } else {
       setEditingLaporan(null)
@@ -252,7 +289,7 @@ function AppContent() {
 
   const handleExport = async (format) => {
     try {
-      const res = await axios.get(`${API}/export`, { params: { format }, responseType: 'blob' })
+      const res = await api.get(`${API}/export`, { params: { format }, responseType: 'blob' })
       const blob = new Blob([res.data])
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -271,7 +308,7 @@ function AppContent() {
 
   const handleExportPDF = async () => {
     try {
-      const res = await axios.get('/api/export/pdf', { responseType: 'blob' })
+      const res = await api.get('/api/export/pdf', { responseType: 'blob' })
       const blob = new Blob([res.data], { type: 'text/html' })
       const url = window.URL.createObjectURL(blob)
       window.open(url, '_blank')
@@ -291,6 +328,8 @@ function AppContent() {
     setShowAdvSearch(false); setShowAuditLog(false); setShowOsintFeed(false)
     setShowLiveTracking(false); setShowSatellite(false); setShowPredictive(false)
     setShowWorkflow(false); setShowDrawingPanel(false)
+    setShowSatuan(false); setSatuanPickLocation(null)
+    setShowTerrain3D(false)
     setEditingLaporan(null); setSelectedLaporan(null)
   }, [])
 
@@ -315,7 +354,7 @@ function AppContent() {
     }
 
     try {
-      await axios.post('/api/drawings', {
+      await api.post('/api/drawings', {
         name, shape_type: type, coordinates,
         color: '#1b4332', stroke_width: 3, fill_opacity: 0.2,
       })
@@ -325,6 +364,28 @@ function AppContent() {
       console.error(err)
     }
   }, [fetchDrawings, addToast])
+
+  const handleZoneDrawn = useCallback((e) => {
+    const layer = e.layer
+    const geojson = layer.toGeoJSON()
+    setPendingZoneGeoJson(geojson.geometry)
+    setZoneDrawingMode(false)
+    addToast('Polygon zona tergambar! Isi detail di panel', 'success')
+  }, [addToast])
+
+  const handleZoneDrawStart = useCallback(() => {
+    setZoneDrawingMode(true)
+    setPendingZoneGeoJson(null)
+  }, [])
+
+  const handleZoneDrawCancel = useCallback(() => {
+    setZoneDrawingMode(false)
+    setPendingZoneGeoJson(null)
+  }, [])
+
+  const handleZoneSaved = useCallback(() => {
+    fetchZones()
+  }, [fetchZones])
 
   const handleSelectDrawing = useCallback((drawing) => {
     if (!drawing?.coordinates) return
@@ -386,7 +447,7 @@ function AppContent() {
 
   const anyPanelOpen = showForm || showUserMgmt || showComments || showThreatZones || showAnalysis ||
     showTimeline || showAdvSearch || showAuditLog || showOsintFeed || showLiveTracking ||
-    showSatellite || showPredictive || showWorkflow || showProfile || showDrawingPanel
+    showSatellite || showPredictive || showWorkflow || showProfile || showDrawingPanel || showReport || showSatuan || showTerrain3D
 
   return (
     <div className="app">
@@ -413,11 +474,26 @@ function AppContent() {
         </div>
 
         <div className="header-nav">
-          <button className={`nav-btn ${currentView === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentView('dashboard')}>📊 Dashboard</button>
-          <button className={`nav-btn ${currentView === 'map' ? 'active' : ''}`} onClick={() => setCurrentView('map')}>🗺️ Peta</button>
-          <button className="nav-btn" onClick={() => setShowLiveTracking(true)}>📡 Tracking</button>
-          <button className="nav-btn" onClick={() => setShowSatellite(true)}>🛰️ Satelit</button>
-          <button className="nav-btn" onClick={() => setShowPredictive(true)}>🔮 Prediktif</button>
+          {user.role === 'lapangan' ? (
+            <>
+              <button className={`nav-btn ${currentView === 'map' ? 'active' : ''}`} onClick={() => setCurrentView('map')}>🗺️ Peta</button>
+              <button className={`nav-btn ${currentView === 'lapangan' ? 'active' : ''}`} onClick={() => setCurrentView('lapangan')}>📍 Bapulket</button>
+            </>
+          ) : (
+            <>
+              <button className={`nav-btn ${currentView === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentView('dashboard')}>📊 Dashboard</button>
+              <button className={`nav-btn ${currentView === 'map' ? 'active' : ''}`} onClick={() => setCurrentView('map')}>🗺️ Peta</button>
+              {['admin','analis','operator'].includes(user.role) && (
+                <button className={`nav-btn ${currentView === 'lapangan' ? 'active' : ''}`} onClick={() => setCurrentView('lapangan')}>📍 Bapulket</button>
+              )}
+              <button className={`nav-btn ${showOsintFeed ? 'active' : ''}`} onClick={() => setShowOsintFeed(true)}>🔍 OSINT</button>
+              <div className="header-nav-divider" />
+              <button className="nav-btn nav-btn-sm" onClick={() => setShowLiveTracking(true)}>📡</button>
+              <button className="nav-btn nav-btn-sm" onClick={() => setShowSatellite(true)}>🛰️</button>
+              <button className="nav-btn nav-btn-sm" onClick={() => setShowTerrain3D(true)}>🏔️</button>
+              <button className="nav-btn nav-btn-sm" onClick={() => setShowPredictive(true)}>🔮</button>
+            </>
+          )}
         </div>
 
         <div className="header-actions">
@@ -440,6 +516,11 @@ function AppContent() {
                     <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowThreatZones(true) }}>🛡️ Zona Ancaman</button>
                     <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowOsintFeed(true) }}>🔍 OSINT Feed</button>
                     <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowWorkflow(true) }}>📋 Workflow</button>
+                    <div className="header-dropdown-divider" />
+                    <div className="header-dropdown-label">Tools</div>
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowLiveTracking(true) }}>📡 Live Tracking</button>
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowSatellite(true) }}>🛰️ Satelit</button>
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowPredictive(true) }}>🔮 Analisis Prediktif</button>
                     {user.role === 'admin' && (
                       <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowAuditLog(true) }}>📝 Audit Log</button>
                     )}
@@ -481,6 +562,13 @@ function AppContent() {
                     <button className="header-dropdown-item" onClick={() => { setShowMenu(false); handleExportPDF() }}>
                       📑 PDF Report
                     </button>
+                    <div className="header-dropdown-divider" />
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowReport(true) }}>
+                      📑 Generator Laporan
+                    </button>
+                    <button className="header-dropdown-item" onClick={() => { setShowMenu(false); setShowSatuan(true) }}>
+                      🏛️ Data Satuan
+                    </button>
                   </div>
                 </motion.div>
               </>
@@ -492,6 +580,7 @@ function AppContent() {
           )}
 
           <NotificationBell />
+          <SecurityBadge compact />
           <ThemeToggle theme={theme} setTheme={setTheme} />
 
           <div style={{ position: 'relative' }}>
@@ -525,6 +614,16 @@ function AppContent() {
         </div>
       </header>
 
+      <NewsTicker
+        laporan={laporan}
+        getKategoriColor={getKategoriColor}
+        getKategoriIcon={getKategoriIcon}
+        onLaporanClick={(id) => {
+          const l = laporan.find(x => x.id === id)
+          if (l) { setSelectedLaporan(l); setCurrentView('map') }
+        }}
+      />
+
       <div className="main-content">
         <AnimatePresence mode="wait">
           {currentView === 'dashboard' ? (
@@ -534,6 +633,11 @@ function AppContent() {
               {initialLoad ? <DashboardSkeleton /> : (
                 <Dashboard laporan={laporan} stats={stats} getKategoriColor={getKategoriColor} getKategoriIcon={getKategoriIcon} />
               )}
+            </motion.div>
+          ) : currentView === 'lapangan' ? (
+            <motion.div key="lapangan" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }} style={{ flex: 1, overflow: 'hidden' }}>
+              <LapanganPage />
             </motion.div>
           ) : (
             <motion.div key="map" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
@@ -575,23 +679,39 @@ function AppContent() {
                     )}
                   </>
                 )}
+                <SecurityBadge collapsed={sidebarCollapsed} />
               </aside>
               <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
-                <div className="map-container" style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-                  <MapView laporan={laporan} selectedId={selectedLaporan?.id} onSelect={setSelectedLaporan}
-                    onMapClick={handleMapClick} pickLocation={pickLocation} center={mapCenter} showForm={showForm}
-                    getKategoriColor={getKategoriColor} getKategoriIcon={getKategoriIcon}
-                    drawingEnabled={drawingEnabled} coordFormat={coordFormat}
-                    drawings={drawings} onShapeCreated={handleShapeCreated}
-                    selectedKategori={selectedKategori} flyToTarget={flyToTarget}
-                    onFlyToDone={() => setFlyToTarget(null)} />
+                <div className={`map-container${pickLocation || satuanPickLocation ? ' pick-location' : ''}`} style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+                    <MapView laporan={laporan} selectedId={selectedLaporan?.id} onSelect={setSelectedLaporan}
+                      onMapClick={handleMapClick} pickLocation={pickLocation} center={mapCenter} showForm={showForm}
+                      getKategoriColor={getKategoriColor} getKategoriIcon={getKategoriIcon}
+                      drawingEnabled={drawingEnabled} coordFormat={coordFormat}
+                      drawings={drawings} zones={zones} satuans={satuans} onShapeCreated={handleShapeCreated}
+                      selectedKategori={selectedKategori} flyToTarget={flyToTarget}
+                      zoneDrawingMode={zoneDrawingMode} onZoneDrawn={handleZoneDrawn}
+                      onFlyToDone={() => setFlyToTarget(null)}
+                      onEdit={(l) => { setEditingLaporan(l); setShowForm(true) }} />
                 </div>
                 <AnimatePresence>
                   {showForm && (
                     <LaporanForm laporan={editingLaporan} pickLocation={pickLocation} onSave={handleSave}
-                      onClose={() => { setShowForm(false); setEditingLaporan(null); setPickLocation(null); setSelectedKategori(null) }}
+                      onClose={() => { setShowForm(false); setEditingLaporan(null); setPrefillData(null); setPickLocation(null); setSelectedKategori(null) }}
                       kategoriList={Object.keys(KATEGORI_COLORS)} getKategoriIcon={getKategoriIcon}
-                      onKategoriChange={setSelectedKategori} onFlyTo={setFlyToTarget} onPickLocation={setPickLocation} />
+                      onKategoriChange={setSelectedKategori} onFlyTo={setFlyToTarget} onPickLocation={setPickLocation}
+                      prefillData={prefillData} />
+                  )}
+                  {showThreatZones && (
+                    <ThreatZonesPanel onClose={() => { setShowThreatZones(false); handleZoneDrawCancel() }}
+                      onZoneDrawStart={handleZoneDrawStart} onZoneDrawCancel={handleZoneDrawCancel}
+                      pendingZoneGeoJson={pendingZoneGeoJson} onZoneSaved={handleZoneSaved} />
+                  )}
+                  {showSatuan && (
+                    <SatuanPanel onClose={() => { setShowSatuan(false); setSatuanPickLocation(null) }}
+                      onSatuanSelect={(s) => setFlyToTarget(s)}
+                      satuanPickLocation={satuanPickLocation}
+                      onSatuanPickLocation={setSatuanPickLocation}
+                      onFlyTo={setFlyToTarget} />
                   )}
                 </AnimatePresence>
               </div>
@@ -624,18 +744,19 @@ function AppContent() {
       <AnimatePresence>
         {showUserMgmt && <UserManagement onClose={() => setShowUserMgmt(false)} />}
         {showComments && selectedLaporan && <CommentPanel laporanId={selectedLaporan.id} onClose={() => setShowComments(false)} />}
-        {showThreatZones && <ThreatZonesPanel onClose={() => setShowThreatZones(false)} />}
         {showAnalysis && <AnalysisPanel onClose={() => setShowAnalysis(false)} />}
         {showTimeline && <Timeline onClose={() => setShowTimeline(false)} />}
         {showAdvSearch && <AdvancedSearch onSearch={handleAdvancedSearch} onClose={() => setShowAdvSearch(false)} />}
         {showAuditLog && <AuditLog onClose={() => setShowAuditLog(false)} />}
-        {showOsintFeed && <OsintFeed onClose={() => setShowOsintFeed(false)} />}
+        {showOsintFeed && <OsintFeed onClose={() => setShowOsintFeed(false)} onCreateLaporan={handleCreateFromIntel} />}
         {showLiveTracking && <LiveTracking onClose={() => setShowLiveTracking(false)} />}
         {showSatellite && <SatelliteView laporan={laporan} onClose={() => setShowSatellite(false)} />}
         {showPredictive && <PredictivePanel onClose={() => setShowPredictive(false)} />}
         {showWorkflow && <WorkflowPanel laporanList={laporan} onClose={() => setShowWorkflow(false)} />}
         {showProfile && <ProfilePage onClose={() => setShowProfile(false)} />}
         {showDrawingPanel && <DrawingPanel drawings={drawings} onRefresh={fetchDrawings} onClose={() => setShowDrawingPanel(false)} onSelectDrawing={handleSelectDrawing} />}
+            {showReport && <ReportGenerator onClose={() => setShowReport(false)} />}
+            {showTerrain3D && <Terrain3D laporan={laporan} satuans={satuans} zones={zones} drawings={drawings} onClose={() => setShowTerrain3D(false)} />}
       </AnimatePresence>
 
       {rtConnected !== undefined && (

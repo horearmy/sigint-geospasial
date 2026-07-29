@@ -5,7 +5,7 @@ import {
   LineElement, Title, Tooltip, Legend, Filler, ArcElement,
 } from 'chart.js'
 import { Bar, Doughnut } from 'react-chartjs-2'
-import axios from 'axios'
+import api from '../utils/api'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement)
 
@@ -20,8 +20,8 @@ export default function PredictivePanel({ onClose }) {
   const fetchData = async () => {
     try {
       const [f, r] = await Promise.all([
-        axios.get('/api/predictive/forecast'),
-        axios.get('/api/predictive/risk-score'),
+        api.get('/api/predictive/forecast'),
+        api.get('/api/predictive/risk-score'),
       ])
       setForecast(f.data.data)
       setRiskScores(r.data.data)
@@ -204,27 +204,27 @@ export default function PredictivePanel({ onClose }) {
                         }}>{r.risk_level}</span>
                       </div>
                       <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.6 }}>
-                        {r.kategori === 'Banjir' && <>
-                          <li>Perkuat tanggul dan sistem drainase</li>
-                          <li>Siapkan evakuasi di area rawan banjir</li>
-                          <li>Pasang sensor ketinggian air</li>
+                        {r.kategori === 'Terorisme' && <>
+                          <li>Tingkatkan koordinasi dengan aparat keamanan</li>
+                          <li>Perketat pengamanan di fasilitas strategis</li>
+                          <li>Perkuat intelijen dan deteksi dini</li>
                         </>}
-                        {r.kategori === 'Gempa Bumi' && <>
-                          <li>Periksa struktur bangunan kritis</li>
-                          <li>Siapkan perlengkapan darurat</li>
-                          <li>Lakukan simulasi evakuasi berkala</li>
+                        {r.kategori === 'Separatisme' && <>
+                          <li>Perkuat dialog dan pendekatan kesejahteraan</li>
+                          <li>Pantau aktivitas kelompok separatis</li>
+                          <li>TINGKATKAN kesiapsiagaan di wilayah rawan</li>
                         </>}
-                        {r.kategori === 'Kebakaran' && <>
-                          <li>Bersihkan area dari bahan mudah terbakar</li>
-                          <li>Siapkan alat pemadam api</li>
-                          <li>Buat jalur evakuasi kebakaran</li>
+                        {r.kategori === 'Gangguan Keamanan' && <>
+                          <li>Perketat patroli di area rawan kriminal</li>
+                          <li>Siapkan tim respons cepat</li>
+                          <li>Perkuat koordinasi dengan kepolisian</li>
                         </>}
-                        {r.kategori === 'Longsor' && <>
-                          <li>Pantau area dengan slope curam</li>
-                          <li> Tanam vegetasi penahan longsor</li>
-                          <li>Evakuasi warga dari zona rawan</li>
+                        {r.kategori === 'Radikalisme' && <>
+                          <li>Lakukan program deradikalisasi</li>
+                          <li>Pantau penyebaran ideologi ekstrem</li>
+                          <li>Perkuat literasi digital masyarakat</li>
                         </>}
-                        {!['Banjir', 'Gempa Bumi', 'Kebakaran', 'Longsor'].includes(r.kategori) && <>
+                        {!['Terorisme', 'Separatisme', 'Gangguan Keamanan', 'Radikalisme'].includes(r.kategori) && <>
                           <li>Tingkatkan pemantauan di area risk tinggi</li>
                           <li>Siapkan tim respons cepat</li>
                           <li>Buat rencana mitigasi khusus</li>

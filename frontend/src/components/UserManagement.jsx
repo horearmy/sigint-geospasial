@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import axios from 'axios'
+import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
-import { useToast } from '../App'
+import { useToast } from '../contexts/ToastContext'
 
-const ROLES = ['admin', 'analis', 'operator', 'viewer']
-const ROLE_COLORS = { admin: '#ef4444', analis: '#8b5cf6', operator: '#1b4332', viewer: '#64748b' }
+const ROLES = ['admin', 'analis', 'operator', 'lapangan', 'viewer']
+const ROLE_COLORS = { admin: '#ef4444', analis: '#8b5cf6', operator: '#1b4332', lapangan: '#0ea5e9', viewer: '#64748b' }
 
 export default function UserManagement({ onClose }) {
   const { user } = useAuth()
@@ -19,7 +19,7 @@ export default function UserManagement({ onClose }) {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('/api/auth/users')
+      const res = await api.get('/api/auth/users')
       setUsers(res.data.data)
     } catch (err) {
       addToast('Gagal mengambil data users', 'error')
@@ -30,7 +30,7 @@ export default function UserManagement({ onClose }) {
 
   const handleRoleChange = async (userId, newRole) => {
     try {
-      await axios.put(`/api/auth/users/${userId}/role`, { role: newRole })
+      await api.put(`/api/auth/users/${userId}/role`, { role: newRole })
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u))
       addToast('Role berhasil diupdate', 'success')
     } catch (err) {
@@ -40,7 +40,7 @@ export default function UserManagement({ onClose }) {
 
   const handleToggleActive = async (userId) => {
     try {
-      const res = await axios.put(`/api/auth/users/${userId}/toggle-active`)
+      const res = await api.put(`/api/auth/users/${userId}/toggle-active`)
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_active: res.data.data.is_active } : u))
       addToast('Status user diupdate', 'success')
     } catch (err) {

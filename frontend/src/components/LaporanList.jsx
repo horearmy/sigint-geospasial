@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { SkeletonCard } from './LoadingSpinner'
+import { SkeletonCard } from './SkeletonLoader'
 
+const ITEMS_PER_PAGE = 50
 const listVariants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.05 } },
@@ -12,6 +14,8 @@ const cardVariants = {
 }
 
 export default function LaporanList({ laporan, selectedId, onSelect, getKategoriColor, getKategoriIcon, loading }) {
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
+
   if (loading) {
     return (
       <div className="laporan-list">
@@ -38,9 +42,12 @@ export default function LaporanList({ laporan, selectedId, onSelect, getKategori
     )
   }
 
+  const visibleLaporan = laporan.slice(0, visibleCount)
+  const hasMore = visibleCount < laporan.length
+
   return (
     <motion.div className="laporan-list" variants={listVariants} initial="hidden" animate="show">
-      {laporan.map((l) => (
+      {visibleLaporan.map((l) => (
         <motion.div
           key={l.id}
           className={`laporan-card ${selectedId === l.id ? 'active' : ''}`}
@@ -95,9 +102,27 @@ export default function LaporanList({ laporan, selectedId, onSelect, getKategori
           <div className="meta" style={{ marginTop: '6px', paddingLeft: l.gambar ? '60px' : '0' }}>
             <span>🕐 {new Date(l.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
             <span>🌐 {parseFloat(l.latitude).toFixed(4)}, {parseFloat(l.longitude).toFixed(4)}</span>
+            {l.signature_url && <span style={{ color: '#22C55E' }}>✅</span>}
           </div>
         </motion.div>
       ))}
+      {hasMore && (
+        <motion.div
+          className="load-more"
+          onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          whileHover={{ scale: 1.02 }}
+          style={{
+            textAlign: 'center', padding: '12px', margin: '8px 0', cursor: 'pointer',
+            color: '#3DDC84', fontWeight: 600, fontSize: '0.85rem',
+            borderRadius: 8, border: '1px solid rgba(61,220,132,0.3)',
+            background: 'rgba(61,220,132,0.08)',
+          }}
+        >
+          + Muat {Math.min(ITEMS_PER_PAGE, laporan.length - visibleCount)} lagi ({laporan.length - visibleCount} tersisa)
+        </motion.div>
+      )}
     </motion.div>
   )
 }

@@ -66,4 +66,36 @@ router.delete('/:id', authMiddleware, roleMiddleware('admin', 'analis'), async (
   }
 });
 
+router.put('/:id', authMiddleware, roleMiddleware('admin', 'analis'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, zone_type, risk_level, description, boundary_geojson } = req.body;
+
+    const existing = await pool.query('SELECT id FROM threat_zones WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Zona tidak ditemukan' });
+    }
+
+    let query = `UPDATE threat_zones SET name=COALESCE($1, name), zone_type=COALESCE($2, zone_type),
+      risk_level=COALESCE($3, risk_level), description=COALESCE($4, description)`;
+    const params = [name || null, zone_type || null, risk_level || null, description || null];
+    let idx = 5;
+
+    if (boundary_geojson) {
+      let boundary = typeof boundary_geojson === 'string' ? JSON.parse(boundary_geojson) : boundary_geojson;
+      query += `, boundary = ST_SetSRID(ST_GeomFromGeoJSON($${idx++}), 4326)::geography`;
+      params.push(JSON.stringify(boundary));
+    }
+
+    query += ` WHERE id = $${idx} RETURNING id, name, zone_type, risk_level, description, created_at`;
+    params.push(id);
+
+    const result = await pool.query(query, params);
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error('PUT zone error:', err);
+    res.status(500).json({ success: false, error: 'Gagal update zona' });
+  }
+});
+
 module.exports = router;

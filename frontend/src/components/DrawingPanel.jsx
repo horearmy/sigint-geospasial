@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import axios from 'axios'
-import { useToast } from '../App'
+import api from '../utils/api'
+import { useToast } from '../contexts/ToastContext'
 import { formatCoordinate } from '../utils/coordinates'
 
 const COLORS = ['#1b4332', '#2d6a4f', '#c9a84c', '#ef4444', '#7c3aed', '#0891b2', '#16a34a', '#ea580c', '#dc2626', '#ca8a04', '#6366f1', '#ec4899']
@@ -13,6 +13,16 @@ export default function DrawingPanel({ drawings, onRefresh, onClose, onSelectDra
   const [editForm, setEditForm] = useState({ name: '', description: '', color: '#1b4332', stroke_width: 3, fill_opacity: 0.2 })
   const [saving, setSaving] = useState(false)
   const [filter, setFilter] = useState('')
+  const [contextMenu, setContextMenu] = useState(null)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setContextMenu(null)
+    }
+    if (contextMenu) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [contextMenu])
 
   const filtered = drawings.filter(d =>
     !filter || d.shape_type === filter || (d.name && d.name.toLowerCase().includes(filter.toLowerCase()))
@@ -32,7 +42,7 @@ export default function DrawingPanel({ drawings, onRefresh, onClose, onSelectDra
   const saveEdit = async (id) => {
     setSaving(true)
     try {
-      await axios.put(`/api/drawings/${id}`, editForm)
+      await api.put(`/api/drawings/${id}`, editForm)
       addToast('Gambar berhasil diupdate', 'success')
       setEditingId(null)
       onRefresh()
@@ -44,12 +54,19 @@ export default function DrawingPanel({ drawings, onRefresh, onClose, onSelectDra
   const deleteDrawing = async (id) => {
     if (!confirm('Yakin hapus gambar ini?')) return
     try {
-      await axios.delete(`/api/drawings/${id}`)
+      await api.delete(`/api/drawings/${id}`)
       addToast('Gambar dihapus', 'success')
       onRefresh()
     } catch (err) {
       addToast('Gagal menghapus', 'error')
     }
+  }
+
+  const handleContextMenu = (e, d) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    setContextMenu({ id: d.id, drawing: d, x: e.clientX - rect.left, y: e.clientY - rect.top })
   }
 
   const getShapeInfo = (drawing) => {
@@ -145,7 +162,7 @@ export default function DrawingPanel({ drawings, onRefresh, onClose, onSelectDra
                   </div>
                 ) : (
                   <>
-                    <div className="drawing-item-header">
+                    <div className="drawing-item-header" onClick={(e) => handleContextMenu(e, d)} style={{ cursor: 'context-menu' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div className="drawing-color-dot" style={{ background: d.color }} />
                         <span className="drawing-shape-icon">{SHAPE_ICONS[d.shape_type]}</span>
@@ -154,12 +171,21 @@ export default function DrawingPanel({ drawings, onRefresh, onClose, onSelectDra
                           {info && <div className="drawing-coord">{info.text}</div>}
                         </div>
                       </div>
-                      <div className="drawing-item-btns">
-                        <button className="icon-btn" onClick={() => startEdit(d)} title="Edit">✏️</button>
-                        <button className="icon-btn" onClick={() => onSelectDrawing && onSelectDrawing(d)} title="Lihat di peta">🗺️</button>
-                        <button className="icon-btn danger" onClick={() => deleteDrawing(d.id)} title="Hapus">🗑️</button>
-                      </div>
                     </div>
+                    {contextMenu?.id === d.id && (
+                      <div className="drawing-context-menu" ref={menuRef}
+                        style={{ top: '100%', left: '16px' }}>
+                        <button onClick={() => { startEdit(d); setContextMenu(null) }}>
+                          ✏️ Edit
+                        </button>
+                        <button onClick={() => { onSelectDrawing && onSelectDrawing(d); setContextMenu(null) }}>
+                          🗺️ Lihat Detail
+                        </button>
+                        <button className="danger" onClick={() => { deleteDrawing(d.id); setContextMenu(null) }}>
+                          🗑️ Hapus
+                        </button>
+                      </div>
+                    )}
                     {d.description && <div className="drawing-desc">{d.description}</div>}
                     <div className="drawing-meta">
                       <span>{d.created_by_name || 'Anonim'}</span>

@@ -3,11 +3,12 @@ import { useState, useEffect, useRef } from 'react'
 export function useAnimatedCounter(target, duration = 1200) {
   const [count, setCount] = useState(0)
   const frameRef = useRef(null)
+  const prevTarget = useRef(0)
 
   useEffect(() => {
     if (target === undefined || target === null) return
     const start = performance.now()
-    const from = 0
+    const from = prevTarget.current
 
     function tick(now) {
       const elapsed = now - start
@@ -22,6 +23,8 @@ export function useAnimatedCounter(target, duration = 1200) {
     frameRef.current = requestAnimationFrame(tick)
     return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current) }
   }, [target, duration])
+
+  useEffect(() => { prevTarget.current = count }, [count])
 
   return count
 }

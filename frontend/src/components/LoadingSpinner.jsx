@@ -19,11 +19,3 @@ export default function LoadingSpinner({ text = 'Memuat data...' }) {
     </div>
   )
 }
-
-export function SkeletonCard() {
-  return <div className="skeleton skeleton-card" />
-}
-
-export function SkeletonKPI() {
-  return <div className="skeleton skeleton-kpi" />
-}

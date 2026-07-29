@@ -158,6 +158,11 @@ export default function LoginPage() {
                 onFocus={(e) => e.target.style.borderColor = '#1b4332'}
                 onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
               />
+              {!isLogin && (
+                <p style={{ margin: '6px 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
+                  Minimal 8 karakter, huruf besar, huruf kecil, dan angka
+                </p>
+              )}
             </div>
 
             <button

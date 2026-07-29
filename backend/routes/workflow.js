@@ -62,6 +62,15 @@ router.get('/workflow', authMiddleware, async (req, res) => {
 router.post('/workflow', authMiddleware, async (req, res) => {
   try {
     const { laporan_id } = req.body;
+    if (!laporan_id) {
+      return res.status(400).json({ success: false, error: 'laporan_id wajib diisi' });
+    }
+
+    const laporanExists = await pool.query('SELECT id FROM laporan WHERE id = $1', [laporan_id]);
+    if (laporanExists.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Laporan tidak ditemukan' });
+    }
+
     const result = await pool.query(`
       INSERT INTO laporan_workflow (laporan_id, status, submitted_by)
       VALUES ($1, 'pending', $2)
@@ -85,6 +94,9 @@ router.put('/workflow/:id/review', authMiddleware, roleMiddleware('admin', 'anal
       WHERE id = $4
       RETURNING *
     `, [status, reviewer_note || '', req.user.id, req.params.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Workflow tidak ditemukan' });
+    }
     res.json({ success: true, data: result.rows[0] });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Gagal review workflow' });

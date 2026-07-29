@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import axios from 'axios'
+import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
-import { useToast } from '../App'
+import { useToast } from '../contexts/ToastContext'
 
 export default function WorkflowPanel({ laporanList, onClose }) {
   const { user } = useAuth()
@@ -12,15 +12,15 @@ export default function WorkflowPanel({ laporanList, onClose }) {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('pending')
   const [showNewTemplate, setShowNewTemplate] = useState(false)
-  const [templateForm, setTemplateForm] = useState({ name: '', kategori: 'Berita Umum', fields: '', description: '' })
+  const [templateForm, setTemplateForm] = useState({ name: '', kategori: 'Informasi Lain', fields: '', description: '' })
 
   useEffect(() => { fetchData() }, [])
 
   const fetchData = async () => {
     try {
       const [w, t] = await Promise.all([
-        axios.get('/api/workflow/workflow'),
-        axios.get('/api/workflow/templates'),
+        api.get('/api/workflow/workflow'),
+        api.get('/api/workflow/templates'),
       ])
       setWorkflows(w.data.data)
       setTemplates(t.data.data)
@@ -30,7 +30,7 @@ export default function WorkflowPanel({ laporanList, onClose }) {
 
   const handleSubmitWorkflow = async (laporanId) => {
     try {
-      await axios.post('/api/workflow/workflow', { laporan_id: laporanId })
+      await api.post('/api/workflow/workflow', { laporan_id: laporanId })
       addToast('Laporan disubmit untuk review', 'success')
       fetchData()
     } catch (err) { addToast('Gagal submit', 'error') }
@@ -38,7 +38,7 @@ export default function WorkflowPanel({ laporanList, onClose }) {
 
   const handleReview = async (id, status) => {
     try {
-      await axios.put(`/api/workflow/workflow/${id}/review`, { status, reviewer_note: '' })
+      await api.put(`/api/workflow/workflow/${id}/review`, { status, reviewer_note: '' })
       addToast(`Laporan ${status}`, 'success')
       fetchData()
     } catch (err) { addToast('Gagal review', 'error') }
@@ -50,14 +50,14 @@ export default function WorkflowPanel({ laporanList, onClose }) {
       const fields = templateForm.fields.split(',').map(f => ({
         name: f.trim(), type: 'text', required: false,
       })).filter(f => f.name)
-      await axios.post('/api/workflow/templates', {
+      await api.post('/api/workflow/templates', {
         name: templateForm.name,
         kategori: templateForm.kategori,
         fields, description: templateForm.description,
       })
       addToast('Template berhasil dibuat', 'success')
       setShowNewTemplate(false)
-      setTemplateForm({ name: '', kategori: 'Berita Umum', fields: '', description: '' })
+      setTemplateForm({ name: '', kategori: 'Informasi Lain', fields: '', description: '' })
       fetchData()
     } catch (err) { addToast('Gagal membuat template', 'error') }
   }
@@ -114,7 +114,7 @@ export default function WorkflowPanel({ laporanList, onClose }) {
                         <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Kategori</label>
                         <select value={templateForm.kategori} onChange={e => setTemplateForm({...templateForm, kategori: e.target.value})}
                           style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.85rem', boxSizing: 'border-box' }}>
-                          {['Banjir', 'Gempa Bumi', 'Kebakaran', 'Longsor', 'Angin Kencang', 'Kekeringan', 'Bencana Lainnya', 'Berita Umum'].map(k => (
+                           {['Gangguan Keamanan', 'Separatisme', 'Terorisme', 'Radikalisme', 'Keamanan Nasional', 'Politik', 'Sosial', 'Ekonomi', 'Informasi Lain'].map(k => (
                             <option key={k} value={k}>{k}</option>
                           ))}
                         </select>

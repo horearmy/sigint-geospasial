@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import axios from 'axios'
+import api from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function NotificationBell() {
@@ -20,21 +20,21 @@ export default function NotificationBell() {
 
   const fetchUnreadCount = async () => {
     try {
-      const res = await axios.get('/api/notifications/unread-count')
+      const res = await api.get('/api/notifications/unread-count')
       setUnreadCount(res.data.data.count)
     } catch (err) {}
   }
 
   const fetchNotifications = async () => {
     try {
-      const res = await axios.get('/api/notifications')
+      const res = await api.get('/api/notifications')
       setNotifications(res.data.data)
     } catch (err) {}
   }
 
   const handleRead = async (id) => {
     try {
-      await axios.put(`/api/notifications/${id}/read`)
+      await api.put(`/api/notifications/${id}/read`)
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
       setUnreadCount(prev => Math.max(0, prev - 1))
     } catch (err) {}
@@ -42,7 +42,7 @@ export default function NotificationBell() {
 
   const handleReadAll = async () => {
     try {
-      await axios.put('/api/notifications/read-all')
+      await api.put('/api/notifications/read-all')
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
       setUnreadCount(0)
     } catch (err) {}
